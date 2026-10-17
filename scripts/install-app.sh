@@ -79,7 +79,10 @@ ditto "$CANDIDATE" "$STAGE/$APP_NAME.app"
 validate "$STAGE/$APP_NAME.app" || fail 'staged app validation failed'
 # Match the full executable path, so another copy of the app is unaffected.
 running() {
-  ps -axo comm= | grep -Fxq "$DEST/Contents/MacOS/$(plist_value "$DEST" CFBundleExecutable)"
+  local processes executable
+  executable="$(plist_value "$DEST" CFBundleExecutable)" || fail 'cannot read installed app executable'
+  processes="$(ps -axo comm=)" || fail 'cannot inspect running processes; installation stopped'
+  grep -Fx -- "$DEST/Contents/MacOS/$executable" <<< "$processes" > /dev/null
 }
 if [ -e "$DEST" ] && running; then
   osascript - "$DEST" <<'APPLESCRIPT'

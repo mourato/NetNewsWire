@@ -3,6 +3,7 @@
 set -eo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEMP="$(mktemp -d "${TMPDIR:-/tmp}/install-app-tests.XXXXXX")"
+TEMP="$(cd "$TEMP" && pwd -P)"
 trap 'rm -rf "$TEMP"' EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -49,6 +50,7 @@ cat > "$TEMP/bin/mv" <<'STUB'
 #!/bin/bash
 if [ "${FAIL_AT:-}" = publish ] && [[ "$1" == *install-stage* ]]; then exit 1; fi
 /bin/mv "$@"
+if [ "${FAIL_AT:-}" = term ] && [[ "$2" == *install-backup* ]]; then kill -TERM "$PPID"; fi
 STUB
 cat > "$TEMP/bin/open" <<'STUB'
 #!/bin/bash
@@ -59,8 +61,19 @@ cat > "$TEMP/bin/rm" <<'STUB'
 if [ "${FAIL_AT:-}" = cleanup ] && [[ "$*" == *install-backup* ]]; then exit 1; fi
 /bin/rm "$@"
 STUB
-printf '#!/bin/sh\nexit 0\n' > "$TEMP/bin/ps"
-printf '#!/bin/sh\nexit 0\n' > "$TEMP/bin/osascript"
+cat > "$TEMP/bin/ps" <<'STUB'
+#!/bin/bash
+[ "${FAIL_AT:-}" != ps ] || exit 1
+if [ "${PROCESS_CASE:-}" = large ] && [ ! -e "$TEST_ROOT/quit-requested" ]; then
+  echo "$TEST_ROOT/apps/NetNewsWire.app/Contents/MacOS/NetNewsWire"
+  awk 'BEGIN { for (i=0; i<100000; i++) print "/other/process" }'
+fi
+STUB
+cat > "$TEMP/bin/osascript" <<'STUB'
+#!/bin/bash
+[ "$2" = "$TEST_ROOT/apps/NetNewsWire.app" ] || exit 1
+touch "$TEST_ROOT/quit-requested"
+STUB
 chmod +x "$TEMP/bin/"*
 export TEST_ROOT="$TEMP" PATH="$TEMP/bin:$PATH" XCODEBUILD="$TEMP/bin/xcodebuild" SWIFT_CODE_SIGN_IDENTITY=-
 INSTALL="$TEMP/repo/scripts/install-app.sh"
@@ -76,13 +89,19 @@ assert_old() {
   [ ! -e "$TEMP/apps/.NetNewsWire.install-backup.app" ]
 }
 run_install() { "$INSTALL" --applications-dir "$TEMP/apps" --yes "$@" > "$TEMP/output" 2>&1; }
-for failure in build signature adhoc staging publish launch; do
+for failure in build signature adhoc staging publish launch ps term; do
   reset_old
   export FAIL_AT="$failure"
   if run_install; then echo "expected $failure rejection" >&2; exit 1; fi
   assert_old
 done
 unset FAIL_AT
+reset_old
+export PROCESS_CASE=large
+run_install --skip-open
+[ -f "$TEMP/quit-requested" ] || { echo 'running app was replaced without requesting quit' >&2; exit 1; }
+[ "$(cat "$DEST/version")" = new ]
+unset PROCESS_CASE
 reset_old
 run_install --skip-open
 [ "$(cat "$DEST/version")" = new ]
@@ -115,4 +134,4 @@ rm -rf "$DEST"
 ln -s "$TEMP/seed" "$DEST"
 if run_install --skip-open; then exit 1; fi
 [ -L "$DEST" ]
-echo 'PASS install-app: Release signing, repeat install, six failure rollbacks, lock and recovery guards'
+echo 'PASS install-app: Release signing, repeat install, eight failure rollbacks, large process output, lock and recovery guards'
