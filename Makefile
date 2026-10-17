@@ -14,7 +14,7 @@ SECRET_KEY_SWIFT := Modules/Secrets/Sources/Secrets/SecretKey.swift
 $(SECRET_KEY_SWIFT): Modules/Secrets/Sources/Secrets/SecretKey.swift.gyb
 	@"$(CURDIR)/buildscripts/updateSecrets.sh"
 
-.PHONY: health build run test lint package dmg notarize identities version build-ios test-ios build-all help
+.PHONY: health build run test lint package dmg notarize identities version build-ios test-ios build-all install-app test-install-app help
 
 health: $(SECRET_KEY_SWIFT) ## Non-interactive gate: resolve packages, unsigned Debug build, tests, lint
 	@"$(SCRIPTS)/health.sh"
@@ -24,6 +24,12 @@ build: $(SECRET_KEY_SWIFT) ## Interactive build (Debug/Release); ARGS='--no-inte
 
 run: $(SECRET_KEY_SWIFT) ## Debug build, then open the app
 	@"$(SCRIPTS)/build.sh" --no-interactive --configuration Debug $(ARGS)
+
+install-app: $(SECRET_KEY_SWIFT) ## Build certificate-signed Release and install into /Applications
+	@"$(SCRIPTS)/install-app.sh" $(ARGS)
+
+test-install-app: ## Test installation safety with isolated filesystem fixtures
+	@bash "$(SCRIPTS)/tests/install-app.sh"
 
 test: $(SECRET_KEY_SWIFT) ## Run the configured test scheme
 	@"$(SCRIPTS)/test.sh" $(ARGS)

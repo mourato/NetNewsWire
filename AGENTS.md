@@ -26,6 +26,8 @@ targets.
 - **`make health`** — non-interactive: resolve packages, unsigned Debug build, tests, lint
 - **`make build`** — interactive Debug/Release build (`ARGS='--no-interactive --configuration Debug'` to skip prompts)
 - **`make run`** — Debug build, then open the app
+- **`make install-app`** — build certificate-signed Release with automatic signing, then install in `/Applications`; `ARGS='--yes --skip-open'` runs unattended without launching
+- **`make test-install-app`** — isolated installer safety tests (no app launch)
 - **`make test`** — run the configured test scheme
 - **`make lint`** — run SwiftLint (only the linters the project declares)
 - **`make package`** — Release app into `dist/`
@@ -67,6 +69,10 @@ Notarizing a DMG also needs a paid Developer ID Application identity, so
 
 `SWIFT_CODE_SIGN_IDENTITY` and `SWIFT_DEVELOPMENT_TEAM` still work as
 environment variables; no machine-local signing values are committed.
+
+For worktree builds, set `XCODE_XCCONFIG_FILE` to the absolute path of your
+local `DeveloperSettings.xcconfig` when the relative include cannot find it.
+Do not copy that machine-local file into the worktree.
 
 #### iOS toolchain
 
