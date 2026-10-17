@@ -1,6 +1,7 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents — Claude Code, Codex, OpenCode,
+Cursor and others — when working with code in this repository.
 
 ## Build and Development Commands
 
@@ -10,6 +11,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Manual Xcode builds**:
   - macOS: `xcodebuild -project NetNewsWire.xcodeproj -scheme NetNewsWire -destination "platform=macOS,arch=arm64" build`
   - iOS: `xcodebuild -project NetNewsWire.xcodeproj -scheme NetNewsWire-iOS -destination "platform=iOS Simulator,name=iPhone 17" build`
+
+The two upstream scripts always use the default toolchain, so their iOS half
+fails while the default Xcode needs a newer CoreSimulator than this Mac
+provides. Prefer `make build-all`, setting `IOS_DEVELOPER_DIR` as described
+below.
+
+### Make command surface
+
+`make` wraps the scripts in `scripts/` (project facts live in
+`scripts/config/project.env`). It drives the macOS scheme; iOS has its own
+targets.
+
+- **`make health`** — non-interactive: resolve packages, unsigned Debug build, tests, lint
+- **`make build`** — interactive Debug/Release build (`ARGS='--no-interactive --configuration Debug'` to skip prompts)
+- **`make run`** — Debug build, then open the app
+- **`make test`** — run the configured test scheme
+- **`make lint`** — run SwiftLint (only the linters the project declares)
+- **`make package`** — Release app into `dist/`
+- **`make dmg`** — DMG in `dist/`
+- **`make notarize`** — notarize and staple the DMG (needs `SWIFT_NOTARY_PROFILE`)
+- **`make identities`** — list Keychain signing identities
+- **`make version`** — show, set, or bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` (stored in `xcconfig/`)
+- **`make build-ios`** / **`make test-ios`** — build or test the iOS scheme
+- **`make build-all`** — both platforms: `health`, then `build-ios`
+
+#### Signing
+
+`--identity` takes a Keychain SHA-1 hash or certificate name, `-` for ad-hoc, or
+`automatic`. Prefer `automatic` here: the app embeds a Share Extension and a
+Safari extension, and those need provisioning profiles, which only automatic
+signing creates.
+
+```sh
+make run     ARGS='--identity automatic'
+make package ARGS='--identity automatic'
+```
+
+A free Apple ID is enough. Put `SharedXcodeSettings/DeveloperSettings.xcconfig`
+next to the repo (it is not committed) with your own team, and let
+`DEVELOPER_ENTITLEMENTS = -dev` drop the push and iCloud/CloudKit entitlements a
+personal team cannot use:
+
+```
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY[sdk=macosx*] = Apple Development
+DEVELOPMENT_TEAM = <your team id>
+ORGANIZATION_IDENTIFIER = <your org id>
+DEVELOPER_ENTITLEMENTS = -dev
+```
+
+Ad-hoc signing cannot build this app, because the extensions need a profile.
+Notarizing a DMG also needs a paid Developer ID Application identity, so
+`make notarize` is unavailable without Apple Developer Program membership.
+
+`SWIFT_CODE_SIGN_IDENTITY` and `SWIFT_DEVELOPMENT_TEAM` still work as
+environment variables; no machine-local signing values are committed.
+
+#### iOS toolchain
+
+iOS builds need a toolchain whose CoreSimulator matches the installed simulator
+runtime. Point `IOS_DEVELOPER_DIR` at that Xcode; unset means the default one.
+
+```sh
+IOS_DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer make build-ios
+```
+
+This is why `make build-all` does not use the upstream
+`buildscripts/quiet_build_and_test.sh`: that script always uses the default
+toolchain, so its iOS half fails when the default Xcode needs a newer
+CoreSimulator than the Mac provides.
 
 ### Testing
 - Run all tests: Use the `NetNewsWire.xctestplan` which includes tests from all modules

@@ -92,3 +92,12 @@ fastlane/test_output
 
 .claude/
 
+# CodeGraph
+#
+# Local code-intelligence index (codegraph init). Large and machine-specific.
+.codegraph/
+
+# swift-project-setup build artifacts
+.xcode-build/
+dist/
+

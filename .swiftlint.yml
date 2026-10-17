@@ -38,6 +38,7 @@ excluded:
   - ".git"
   - ".swiftpm"
   - ".claude"
+  - ".xcode-build"
   - Modules/*/.build/
   - Modules/Secrets/Sources/Secrets/SecretKey.swift
   - Modules/Account/Tests/
