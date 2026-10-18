@@ -650,7 +650,7 @@ private extension MinifluxAccountDelegate {
 		// account top level.
 		if let folders = account.folders {
 			for folder in folders {
-				for feed in folder.topLevelFeeds {
+				for feed in Array(folder.topLevelFeeds) {
 					if !feedExternalIDs.contains(feed.feedID) {
 						// Clear settings before removing so a feed re-added at this URL — which
 						// Miniflux assigns a new numeric feedID — doesn't inherit the stale
@@ -711,7 +711,7 @@ private extension MinifluxAccountDelegate {
 			let categoryFeedExternalIDs = Set(categoryFeeds.map { String($0.feedID) })
 
 			// Remove any feeds no longer in this category.
-			for feed in folder.topLevelFeeds {
+			for feed in Array(folder.topLevelFeeds) {
 				if feedIDsWithNoCategory.contains(feed.feedID) {
 					continue
 				}

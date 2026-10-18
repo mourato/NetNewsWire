@@ -163,4 +163,33 @@ import RSWeb
 		TestAccountManager.shared.deleteAccount(account)
 	}
 
+	func testSyncRemovesAllStaleFolderFeeds() async throws {
+		TestingURLProtocol.setResponse("/v1/version", file: "JSON/miniflux_version.json")
+		TestingURLProtocol.setResponse("/v1/categories", file: "JSON/miniflux_categories_initial.json")
+		TestingURLProtocol.setResponse("/v1/feeds", file: "JSON/miniflux_feeds_initial.json")
+		TestingURLProtocol.setResponse("/v1/entries/ids", file: "JSON/miniflux_entry_ids.json")
+		TestingURLProtocol.setResponse("/v1/entries?", file: "JSON/miniflux_entries_page1.json")
+
+		let account = TestAccountManager.shared.createAccount(type: .miniflux)
+		defer {
+			TestAccountManager.shared.deleteAccount(account)
+		}
+		account.endpointURL = URL(string: "https://miniflux.test")
+
+		try await account.refreshAll()
+
+		guard let folder = account.folders?.first(where: { $0.externalID == "1" }) else {
+			XCTFail("Expected category 1 folder")
+			return
+		}
+		for feedID in ["stale/1", "stale/2"] {
+			let feed = account.createFeed(with: "Stale", url: "https://\(feedID).example/feed", feedID: feedID, homePageURL: nil)
+			folder.addFeedToTreeAtTopLevel(feed)
+		}
+
+		try await account.refreshAll()
+
+		XCTAssertEqual(Set(folder.topLevelFeeds.map { $0.feedID }), Set(["101", "105"]))
+	}
+
 }
