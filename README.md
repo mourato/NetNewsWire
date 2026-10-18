@@ -40,7 +40,13 @@ without needing to check in anything into source control.
 
 You can do this in one of two ways: using the included `setup.sh` script or by creating the folder structure and file manually.
 
-##### Using `setup.sh`
+#### Architectures
+
+macOS app and extension executables are built for arm64 only and require an
+Apple silicon Mac. Bundled third-party frameworks and helper executables may
+remain universal; for example, Sparkle currently includes both arm64 and
+x86_64 slices. iOS device and simulator architectures are unchanged.
+
 
 - Open Terminal and `cd` into the NetNewsWire directory. 
 - Run this command to ensure you have execution rights for the script: `chmod +x setup.sh`

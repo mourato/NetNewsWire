@@ -17,9 +17,13 @@ fails while the default Xcode needs a newer CoreSimulator than this Mac
 provides. Prefer `make build-all`, setting `IOS_DEVELOPER_DIR` as described
 below.
 
-### Make command surface
+### Architectures
 
-`make` wraps the scripts in `scripts/` (project facts live in
+macOS app and extension executables are built for arm64 only and require an
+Apple silicon Mac. Bundled third-party frameworks and helper executables may
+remain universal; for example, Sparkle currently includes both arm64 and
+x86_64 slices. iOS device and simulator architectures are unchanged.
+
 `scripts/config/project.env`). It drives the macOS scheme; iOS has its own
 targets.
 
