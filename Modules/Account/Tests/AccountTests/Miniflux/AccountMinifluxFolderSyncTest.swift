@@ -109,6 +109,9 @@ import RSWeb
 		let account = TestAccountManager.shared.createAccount(type: .miniflux)
 		account.endpointURL = URL(string: "https://miniflux.test")
 
+		let staleRootFeed = account.createFeed(with: "Stale root", url: "https://stale.example/feed", feedID: "999", homePageURL: nil)
+		account.addFeedToTreeAtTopLevel(staleRootFeed)
+
 		try await account.refreshAll()
 
 		guard let folders = account.folders else {
@@ -148,6 +151,7 @@ import RSWeb
 		// Miniflux feeds always belong to exactly one category, so nothing should land
 		// at the account's top level.
 		XCTAssertEqual(0, account.topLevelFeeds.count)
+		XCTAssertNil(account.existingFeed(withFeedID: "999"))
 
 		guard let generalFeed = all.topLevelFeeds.first(where: { $0.externalID == "101" }) else {
 			XCTFail("Expected feed 101 in the “All” folder")

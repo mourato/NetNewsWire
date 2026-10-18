@@ -316,16 +316,21 @@ import Secrets
 
 		do {
 			return try await account.logActivity(kind: .subscribeFeed, detail: url.absoluteString) {
-				let feedSpecifiers = try await FeedFinder.find(url: url)
+				let feedURL: String
+				if validateFeed {
+					let feedSpecifiers = try await FeedFinder.find(url: url)
+					guard let bestFeedSpecifier = FeedSpecifier.bestFeed(in: feedSpecifiers) else {
+						throw AccountError.createErrorNotFound
+					}
+					feedURL = bestFeedSpecifier.urlString
+				} else {
+					feedURL = url.absoluteString
+				}
 				refreshProgress.completeTask()
 				uncompletedTasks -= 1
 
-				guard let bestFeedSpecifier = FeedSpecifier.bestFeed(in: feedSpecifiers) else {
-					throw AccountError.createErrorNotFound
-				}
-
 				let categoryID = try await categoryID(for: container)
-				let feedID = try await caller.createFeed(url: bestFeedSpecifier.urlString, categoryID: categoryID)
+				let feedID = try await caller.createFeed(url: feedURL, categoryID: categoryID)
 				refreshProgress.completeTask()
 				uncompletedTasks -= 1
 
@@ -452,19 +457,13 @@ import Secrets
 		guard let account else {
 			return
 		}
-		await account.logActivity(kind: .restoreFolder, detail: folder.name ?? "") {
+		try await account.logActivity(kind: .restoreFolder, detail: folder.name ?? "") {
 			// The category was deleted server-side along with the folder — re-create it and
 			// point the folder at the new externalID before restoring its member feeds.
-			do {
-				let category = try await caller.createCategory(title: folder.name ?? "")
-				folder.externalID = String(category.categoryID)
-			} catch {
-				Self.logger.error("Miniflux: Restore folder category error: \(error.localizedDescription)")
-				postSyncError(error, account: account, operation: "Restoring folder")
-				return
-			}
+			let category = try await caller.createCategory(title: folder.name ?? "")
+			folder.externalID = String(category.categoryID)
 
-			for feed in folder.topLevelFeeds {
+			for feed in Array(folder.topLevelFeeds) {
 				folder.topLevelFeeds.remove(feed)
 
 				do {
@@ -662,6 +661,14 @@ private extension MinifluxAccountDelegate {
 					}
 				}
 			}
+		}
+
+		// Remove root feeds. Miniflux category placement owns every feed.
+		for feed in Array(account.topLevelFeeds) {
+			if !feedExternalIDs.contains(feed.feedID) {
+				account.clearFeedSettings(feed)
+			}
+			account.removeFeedFromTreeAtTopLevel(feed)
 		}
 
 		// Add any feeds we don't have and update any we do. New feeds are added directly

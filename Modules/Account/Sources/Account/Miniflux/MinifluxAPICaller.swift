@@ -182,10 +182,10 @@ import Secrets
 	func retrieveEntries(offset: Int, changedAfter: Date?, publishedAfter: Date?) async throws -> MinifluxEntriesResponse {
 		var query = Self.entriesPageQueryItems(offset: offset)
 		if let changedAfter {
-			query.append(URLQueryItem(name: "changed_after", value: String(Int(changedAfter.timeIntervalSince1970))))
+			query.append(URLQueryItem(name: "changed_after", value: Self.rfc3339Formatter.string(from: changedAfter)))
 		}
 		if let publishedAfter {
-			query.append(URLQueryItem(name: "published_after", value: String(Int(publishedAfter.timeIntervalSince1970))))
+			query.append(URLQueryItem(name: "published_after", value: Self.rfc3339Formatter.string(from: publishedAfter)))
 		}
 
 		return try await fetch("entries", query: query)
@@ -343,6 +343,12 @@ private extension MinifluxAPICaller {
 	func toggleBookmark(entryID: Int64) async throws {
 		try await session.send(request: makeRequest(path: "entries/\(entryID)/bookmark"), method: HTTPMethod.put)
 	}
+
+	static let rfc3339Formatter: ISO8601DateFormatter = {
+		let formatter = ISO8601DateFormatter()
+		formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+		return formatter
+	}()
 
 	static func entriesPageQueryItems(offset: Int) -> [URLQueryItem] {
 		[

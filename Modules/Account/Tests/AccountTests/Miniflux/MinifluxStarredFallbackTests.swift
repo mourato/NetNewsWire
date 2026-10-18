@@ -17,6 +17,24 @@ import Secrets
 		TestingURLProtocol.reset()
 	}
 
+	func testEntryDateFiltersUseRFC3339QueryValues() async throws {
+		let accountSettings = AccountSettings(accountID: UUID().uuidString, dataFolder: NSTemporaryDirectory())
+		accountSettings.endpointURL = URL(string: "https://miniflux.test")
+		let caller = MinifluxAPICaller()
+		caller.credentials = Credentials(type: .minifluxAPIToken, username: "", secret: "token")
+		caller.accountSettings = accountSettings
+		TestingURLProtocol.setResponse("/v1/entries?", file: "JSON/miniflux_entries_page1.json")
+
+		guard let date = ISO8601DateFormatter().date(from: "2026-07-07T05:00:00Z") else {
+			XCTFail("Expected valid test date")
+			return
+		}
+		_ = try await caller.retrieveEntries(offset: 0, changedAfter: date, publishedAfter: date)
+
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "changed_after=2026-07-07T05"), 1)
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "published_after=2026-07-07T05"), 1)
+	}
+
 	func testFallbackOnlyTogglesEntriesWhoseStateDiffers() async throws {
 		let accountSettings = AccountSettings(accountID: UUID().uuidString, dataFolder: NSTemporaryDirectory())
 		accountSettings.endpointURL = URL(string: "https://miniflux.test")

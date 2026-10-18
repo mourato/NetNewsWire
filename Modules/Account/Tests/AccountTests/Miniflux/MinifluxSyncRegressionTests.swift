@@ -66,6 +66,58 @@ import SyncDatabase
 		XCTAssertGreaterThan(TestingURLProtocol.requestCount(forURLContaining: "/v1/entries/ids"), firstAttemptCount)
 	}
 
+	func testCreateFeedWithoutValidationSubmitsSuppliedURL() async throws {
+		let account = TestAccountManager.shared.createAccount(type: .miniflux)
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		account.endpointURL = URL(string: "https://miniflux.test")
+		let folder = account.ensureFolder(with: "News")
+		folder?.externalID = "3"
+		TestingURLProtocol.setResponse(.init(data: Data(#"{"feed_id":101}"#.utf8)), forURLContaining: "/v1/feeds", httpMethod: "POST")
+		TestingURLProtocol.setResponse(.init(data: Data(#"{"id":101,"feed_url":"https://supplied.example/feed.xml","title":"Supplied"}"#.utf8)), forURLContaining: "/v1/feeds/101", httpMethod: "GET")
+
+		guard let folder else {
+			XCTFail("Expected folder")
+			return
+		}
+		let feed = try await withCheckedThrowingContinuation { continuation in
+			account.createFeed(url: "https://supplied.example/feed.xml", name: nil, container: folder, validateFeed: false) { result in
+				continuation.resume(with: result)
+			}
+		}
+
+		XCTAssertEqual(feed.url, "https://supplied.example/feed.xml")
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/v1/feeds", httpMethod: "POST"), 1)
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "supplied.example"), 0)
+	}
+
+	func testRestoreFolderPropagatesCategoryFailure() async throws {
+		let account = TestAccountManager.shared.createAccount(type: .miniflux)
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		account.endpointURL = URL(string: "https://miniflux.test")
+		let folder = account.ensureFolder(with: "News")
+		folder?.externalID = "3"
+		TestingURLProtocol.setResponse(.init(statusCode: 500), forURLContaining: "/v1/categories", httpMethod: "POST")
+
+		guard let folder else {
+			XCTFail("Expected folder")
+			return
+		}
+		account.removeFolderFromTree(folder)
+
+		let result = await withCheckedContinuation { continuation in
+			account.restoreFolder(folder) { result in
+				continuation.resume(returning: result)
+			}
+		}
+		switch result {
+		case .success:
+			XCTFail("Expected category creation to fail")
+		case .failure:
+			XCTAssertEqual(folder.externalID, "3")
+			XCTAssertFalse(account.folders?.contains(folder) == true)
+		}
+	}
+
 	func testInitialReconciliationPreservesPendingLocalStatus() async {
 		let account = TestAccountManager.shared.createAccount(type: .miniflux)
 		defer { TestAccountManager.shared.deleteAccount(account) }
