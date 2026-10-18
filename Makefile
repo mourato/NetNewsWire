@@ -14,7 +14,7 @@ SECRET_KEY_SWIFT := Modules/Secrets/Sources/Secrets/SecretKey.swift
 $(SECRET_KEY_SWIFT): Modules/Secrets/Sources/Secrets/SecretKey.swift.gyb
 	@"$(CURDIR)/buildscripts/updateSecrets.sh"
 
-.PHONY: health build run test lint package dmg notarize identities version build-ios test-ios build-all install-app test-install-app help
+.PHONY: health build run test test-account lint package dmg notarize identities version build-ios test-ios build-all install-app test-install-app help
 
 health: $(SECRET_KEY_SWIFT) ## Non-interactive gate: resolve packages, unsigned Debug build, tests, lint
 	@"$(SCRIPTS)/health.sh"
@@ -33,6 +33,9 @@ test-install-app: ## Test installation safety with isolated filesystem fixtures
 
 test: $(SECRET_KEY_SWIFT) ## Run the configured test scheme
 	@"$(SCRIPTS)/test.sh" $(ARGS)
+
+test-account: $(SECRET_KEY_SWIFT) ## Run Account package tests; pass ARGS='--filter Miniflux'
+	@SECRET_KEY_SWIFT="$(CURDIR)/$(SECRET_KEY_SWIFT)" "$(SCRIPTS)/test-account.sh" $(ARGS)
 
 lint: ## Run SwiftLint
 	@"$(SCRIPTS)/lint.sh"

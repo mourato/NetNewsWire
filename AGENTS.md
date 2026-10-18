@@ -29,6 +29,7 @@ targets.
 - **`make install-app`** — build certificate-signed Release with automatic signing, then install in `/Applications`; `ARGS='--yes --skip-open'` runs unattended without launching
 - **`make test-install-app`** — isolated installer safety tests (no app launch)
 - **`make test`** — run the configured test scheme
+- **`make test-account`** — run Account Swift package tests (`ARGS='--filter Miniflux'` for focused Miniflux tests)
 - **`make lint`** — run SwiftLint (only the linters the project declares)
 - **`make package`** — Release app into `dist/`
 - **`make dmg`** — DMG in `dist/`
@@ -139,7 +140,10 @@ NetNewsWire is a multi-platform RSS reader with separate targets for macOS and i
 - Code signing configured through SharedXcodeSettings for development
 - Documentation and technical notes are located in the `Technotes/` folder
 
-## Code Formatting
+### Miniflux implementation note
+
+`MinifluxAccountDelegate.swift` remains above the usual Swift file-size target because sync lifecycle, version fallback, status reconciliation, and feed-tree ownership must stay together for this initial provider integration. Split into focused delegate extensions in a follow-up after behavior stabilizes; keep `Account.storeMinifluxCredentials` as the shared credential and identity transaction boundary.
+
 
 Prefer idiomatic modern Swift.
 
