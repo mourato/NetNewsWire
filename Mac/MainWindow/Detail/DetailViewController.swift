@@ -61,7 +61,23 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		}
 	}
 
+	/// Identity of the article shown for summarization purposes; accountID is part of
+	/// it because articleIDs are only unique within an account.
+	private struct ArticleIdentity: Equatable {
+		let accountID: String
+		let articleID: String
+
+		init?(article: Article?) {
+			guard let article else {
+				return nil
+			}
+			self.accountID = article.accountID
+			self.articleID = article.articleID
+		}
+	}
+
 	private var summaryPanelController: ArticleSummaryPanelViewController?
+	private var summaryArticleIdentity: ArticleIdentity?
 	private let summaryRunner = ArticleSummaryRunner()
 	private var summaryArticleID: String?
 	private static let summaryPanelHeight: CGFloat = 150
@@ -77,8 +93,9 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	// MARK: - API
 
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
-		// A different displayed article invalidates any in-flight or shown summary.
-		cancelSummaryIfArticleChanged(to: state)
+		// A different displayed article (or empty detail) invalidates any in-flight
+		// or shown summary, including mode switches that swap the active web view.
+		cancelSummaryIfDisplayedIdentityChanged(to: state)
 		switch mode {
 		case .regular:
 			detailStateForRegular = state
@@ -89,6 +106,9 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 
 	func showDetail(for mode: TimelineSourceMode) {
 		currentSourceMode = mode
+		// Switching between the regular and search web views may reveal a different
+		// article; re-check what is now displayed.
+		cancelSummaryIfDisplayedIdentityChanged(to: currentWebViewController.state)
 	}
 
 	func stopMediaPlayback() {
@@ -134,7 +154,7 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		guard let article = currentArticle else {
 			return
 		}
-		summaryArticleID = article.articleID
+		summaryArticleIdentity = ArticleIdentity(article: article)
 		summaryRunner.onStateChange = { [weak self] displayState in
 			self?.handleSummaryStateChange(displayState)
 		}
@@ -186,18 +206,18 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		summaryRunner.onStateChange = nil
 		summaryRunner.cancel()
 		tearDownSummaryPanel()
-		summaryArticleID = nil
+		summaryArticleIdentity = nil
 	}
 
-	private func cancelSummaryIfArticleChanged(to state: DetailState) {
-		let nextArticleID: String?
+	private func cancelSummaryIfDisplayedIdentityChanged(to state: DetailState) {
+		let displayedArticle: Article?
 		switch state {
 		case .article(let article, _), .extracted(let article, _, _):
-			nextArticleID = article.articleID
+			displayedArticle = article
 		default:
-			nextArticleID = nil
+			displayedArticle = nil
 		}
-		if nextArticleID != summaryArticleID {
+		if ArticleIdentity(article: displayedArticle) != summaryArticleIdentity {
 			cancelSummary()
 		}
 	}

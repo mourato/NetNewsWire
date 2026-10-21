@@ -72,7 +72,21 @@ final class ArticleSummaryPanelView: UIView {
 		bodyLabel.font = .preferredFont(forTextStyle: .body)
 		bodyLabel.adjustsFontForContentSizeCategory = true
 		bodyLabel.numberOfLines = 0
-		bodyLabel.isAccessibilityElement = false // The panel itself is read as one element
+		bodyLabel.isAccessibilityElement = false // The panel itself is the accessible element
+
+		// VoiceOver reads the whole panel as one element: title as the label, summary
+		// text as the value, and dismissal as a custom action (the visible button is
+		// for sighted users).
+		isAccessibilityElement = true
+		accessibilityLabel = NSLocalizedString("Article Summary", comment: "Summary panel title")
+		accessibilityTraits = [.staticText]
+		accessibilityCustomActions = [
+			UIAccessibilityCustomAction(
+				name: NSLocalizedString("Dismiss Summary", comment: "Dismiss summary button"),
+				target: self,
+				selector: #selector(dismissAccessibility(_:))
+			)
+		]
 		bodyLabel.translatesAutoresizingMaskIntoConstraints = false
 		addSubview(bodyLabel)
 		NSLayoutConstraint.activate([
@@ -109,10 +123,29 @@ final class ArticleSummaryPanelView: UIView {
 			bodyLabel.text = errorDescription
 			bodyLabel.textColor = .secondaryLabel
 		}
+		accessibilityValue = accessibilityValue(for: displayState)
+	}
+
+	private func accessibilityValue(for displayState: ArticleSummaryDisplayState) -> String {
+		switch displayState {
+		case .idle:
+			return ""
+		case .loading:
+			return NSLocalizedString("Loading summary", comment: "VoiceOver value while a summary is being generated")
+		case .finished(let text, _):
+			return text
+		case .failed(let errorDescription):
+			return errorDescription
+		}
 	}
 
 	@objc private func dismissTapped() {
 		onDismiss?()
+	}
+
+	@objc private func dismissAccessibility(_ action: UIAccessibilityCustomAction) -> Bool {
+		onDismiss?()
+		return true
 	}
 }
 

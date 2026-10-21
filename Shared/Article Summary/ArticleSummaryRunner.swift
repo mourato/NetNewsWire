@@ -23,7 +23,7 @@ import os
 	}
 
 	/// Builds the input from an article: contentText, else summary, else plain text of contentHTML.
-	init(article: Article, plainTextFromHTML: ((String) -> String)? = nil) {
+	init(article: Article) {
 		self.articleID = article.articleID
 		self.title = article.title ?? ""
 
@@ -33,11 +33,7 @@ import os
 		} else if let summary = article.summary, !summary.isEmpty {
 			rawText = summary
 		} else if let contentHTML = article.contentHTML, !contentHTML.isEmpty {
-			if let plainTextFromHTML {
-				rawText = plainTextFromHTML(contentHTML)
-			} else {
-				rawText = ArticleSummaryInput.plainText(fromHTML: contentHTML)
-			}
+			rawText = ArticleSummaryInput.plainText(fromHTML: contentHTML)
 		} else {
 			rawText = ""
 		}
@@ -108,7 +104,14 @@ import os
 /// - Callers clear the summary on article change/close via `cancel()`.
 @MainActor final class ArticleSummaryRunner {
 
-	private var task: Task<Void, Never>?
+	// Each request carries an ownership token: a stale or cancelled completion may
+	// neither publish a summary nor clear a newer request's task handle.
+	private struct RunningTask {
+		let token: UUID
+		let handle: Task<Void, Never>
+	}
+
+	private var runningTask: RunningTask?
 	private var runningArticleID: String?
 
 	// MARK: - API
@@ -123,7 +126,7 @@ import os
 
 	func summarize(input: ArticleSummaryInput, settings: ArticleSummarySettings) {
 		// One active request per displayed article.
-		guard task == nil else {
+		guard runningTask == nil else {
 			return
 		}
 		guard !input.isEmpty else {
@@ -134,15 +137,19 @@ import os
 		// Snapshot everything the request needs before the first await.
 		let snapshotArticleID = input.articleID
 		let snapshotSettings = settings
+		let token = UUID()
 		runningArticleID = snapshotArticleID
-		displayState = .loading
-
-		task = Task { [weak self] () -> Void in
+		let requestTask = Task { [weak self] () -> Void in
 			let result = await ArticleSummaryRunner.results(input: input, settings: snapshotSettings)
 			guard let self else {
 				return
 			}
-			self.task = nil
+			// An old completion that lost ownership (cancelled, replaced, or cleared)
+			// leaves the slot and any newer request untouched.
+			guard let current = self.runningTask, current.token == token else {
+				return
+			}
+			self.runningTask = nil
 			// Stale or cancelled results publish nothing.
 			guard !Task.isCancelled, self.runningArticleID == snapshotArticleID else {
 				return
@@ -157,11 +164,13 @@ import os
 				self.displayState = .failed(errorDescription: error.localizedDescription)
 			}
 		}
+		runningTask = RunningTask(token: token, handle: requestTask)
+		displayState = .loading
 	}
 
 	func cancel() {
-		task?.cancel()
-		task = nil
+		runningTask?.handle.cancel()
+		runningTask = nil
 		runningArticleID = nil
 		displayState = .idle
 	}

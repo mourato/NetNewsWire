@@ -70,16 +70,6 @@ struct OpenAICompatibleSummaryClient {
 		}
 	}
 
-	/// `true` if this provider has valid endpoint/model settings, ignoring the key.
-	static func isConfigurationValid(endpoint: String?, model: String?) -> Bool {
-		do {
-			_ = try validate(endpoint: endpoint, model: model)
-			return true
-		} catch {
-			return false
-		}
-	}
-
 	static func isLoopbackHost(_ host: String) -> Bool {
 		let normalized = host.lowercased().replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")
 		return normalized == "localhost" || normalized == "127.0.0.1" || normalized == "::1" || normalized.hasPrefix("::ffff:127.")
@@ -103,7 +93,7 @@ struct OpenAICompatibleSummaryClient {
 		let modelsURL = baseURL.appending(path: "models")
 		let request = Self.makeRequest(url: modelsURL, apiKey: apiKey)
 		let (data, response) = try await Self.execute(request)
-		guard Self.isOK(response) else {
+		guard Self.isSuccessfulHTTPResponse(response) else {
 			throw Self.httpError(response)
 		}
 		let list = try Self.decodeJSON(ModelListResponse.self, from: data)
@@ -129,7 +119,7 @@ struct OpenAICompatibleSummaryClient {
 		request.httpBody = try JSONEncoder().encode(payload)
 
 		let (data, response) = try await Self.execute(request)
-		guard Self.isOK(response) else {
+		guard Self.isSuccessfulHTTPResponse(response) else {
 			throw Self.httpError(response)
 		}
 		let completion = try Self.decodeJSON(ChatResponse.self, from: data)
@@ -193,7 +183,7 @@ struct OpenAICompatibleSummaryClient {
 		}
 	}
 
-	private static func isOK(_ response: HTTPURLResponse) -> Bool {
+	private static func isSuccessfulHTTPResponse(_ response: HTTPURLResponse) -> Bool {
 		(200..<300).contains(response.statusCode)
 	}
 

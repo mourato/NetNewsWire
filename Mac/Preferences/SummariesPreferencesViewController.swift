@@ -243,7 +243,7 @@ final class SummariesPreferencesViewController: NSViewController {
 		} else {
 			localStatusLabel.stringValue = NSLocalizedString("Available on this Mac.", comment: "Summaries local model status")
 		}
-		localStatusLabel.isHidden = !isRemote
+		localStatusLabel.isHidden = isRemote
 
 		endpointField.stringValue = AppDefaults.shared.articleSummaryEndpoint ?? ""
 		modelField.stringValue = AppDefaults.shared.articleSummaryModel ?? ""
@@ -304,4 +304,8 @@ extension SummariesPreferencesViewController: NSTextFieldDelegate {
 		}
 		refreshControlStates()
 	}
+}
+
+#Preview("Summaries Preferences") {
+	SummariesPreferencesViewController()
 }
