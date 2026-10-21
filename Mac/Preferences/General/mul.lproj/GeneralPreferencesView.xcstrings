@@ -376,6 +376,12 @@
             "state" : "new",
             "value" : "Mark articles as read"
           }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marcar artículos como leídos"
+          }
         }
       }
     },
@@ -387,6 +393,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Save for Later:"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar para más tarde:"
           }
         }
       }

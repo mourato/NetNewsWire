@@ -634,10 +634,16 @@ public enum FetchType {
 	}
 
 	/// Marks the articles read only after the save succeeds, and only when `markAsRead` is true.
+	/// Throws only for the save: once it succeeds, a failure to mark read is logged, not thrown.
 	public func saveArticlesForLater(articleIDs: Set<String>, markAsRead: Bool) async throws {
 		try await delegate.saveArticlesForLater(articleIDs: articleIDs)
-		if markAsRead {
+		guard markAsRead else {
+			return
+		}
+		do {
 			try await markArticles(articleIDs: articleIDs, statusKey: .read, flag: true)
+		} catch {
+			Self.logger.error("Account: saveArticlesForLater: saved, but marking read failed: \(error.localizedDescription, privacy: .public)")
 		}
 	}
 

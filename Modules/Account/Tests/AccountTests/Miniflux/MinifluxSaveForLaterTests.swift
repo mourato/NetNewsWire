@@ -78,8 +78,76 @@ import Secrets
 
 		try await account.saveArticlesForLater(articleIDs: ["5001"], markAsRead: true)
 
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: Self.saveURL, httpMethod: HTTPMethod.post), 1)
 		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
 		XCTAssertFalse(unreadArticleIDs.contains("5001"))
+	}
+
+	func testSavingSeveralArticlesPostsOncePerArticle() async throws {
+		let account = await makeMinifluxAccount(unreadArticleIDs: ["5001", "5002", "5003"])
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		TestingURLProtocol.setResponse(.init(statusCode: 202), forURLContaining: "/save", httpMethod: HTTPMethod.post)
+
+		try await account.saveArticlesForLater(articleIDs: ["5001", "5002", "5003"], markAsRead: false)
+
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/save", httpMethod: HTTPMethod.post), 3)
+		for entryID in ["5001", "5002", "5003"] {
+			XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/v1/entries/\(entryID)/save", httpMethod: HTTPMethod.post), 1, "Entry \(entryID)")
+		}
+	}
+
+	func testNonNumericArticleIDThrowsWithoutSendingOrMarkingRead() async {
+		let account = await makeMinifluxAccount(unreadArticleIDs: ["5001", "not-an-entry"])
+		defer { TestAccountManager.shared.deleteAccount(account) }
+
+		do {
+			try await account.saveArticlesForLater(articleIDs: ["5001", "not-an-entry"], markAsRead: true)
+			XCTFail("Expected an invalid parameter error")
+		} catch AccountError.invalidParameter {
+		} catch {
+			XCTFail("Unexpected error: \(error)")
+		}
+
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/save"), 0)
+		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		XCTAssertTrue(unreadArticleIDs.contains("5001"))
+		XCTAssertTrue(unreadArticleIDs.contains("not-an-entry"))
+	}
+
+	/// Marking more than the status batch threshold read sends statuses right away;
+	/// a failing status send must not turn the completed save into a failure.
+	func testMarkReadFailureAfterSuccessfulSaveStillSucceeds() async throws {
+		let articleIDs = Set((6001...6101).map { String($0) })
+		let account = await makeMinifluxAccount(unreadArticleIDs: articleIDs)
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		TestingURLProtocol.setResponse(.init(statusCode: 202), forURLContaining: "/save", httpMethod: HTTPMethod.post)
+		TestingURLProtocol.setResponse(.init(statusCode: 500), forURLContaining: "/v1/entries", httpMethod: HTTPMethod.put)
+
+		try await account.saveArticlesForLater(articleIDs: articleIDs, markAsRead: true)
+
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/save", httpMethod: HTTPMethod.post), articleIDs.count)
+		XCTAssertGreaterThan(TestingURLProtocol.requestCount(forURLContaining: "/v1/entries", httpMethod: HTTPMethod.put), 0, "The status send should have been attempted and failed")
+		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		XCTAssertTrue(unreadArticleIDs.isDisjoint(with: articleIDs))
+	}
+
+	func testServerErrorMessageIsSurfacedWhenSaveIsRejected() async {
+		let account = await makeMinifluxAccountWithUnreadArticle()
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		let body = Data(#"{"error_message":"server says no"}"#.utf8)
+		TestingURLProtocol.setResponse(.init(statusCode: 400, data: body), forURLContaining: "/v1/entries/5001/save", httpMethod: HTTPMethod.post)
+
+		do {
+			try await account.saveArticlesForLater(articleIDs: ["5001"], markAsRead: true)
+			XCTFail("Expected the save to fail")
+		} catch MinifluxError.saveForLaterFailed(let message) {
+			XCTAssertEqual(message, "server says no")
+		} catch {
+			XCTFail("Unexpected error: \(error)")
+		}
+
+		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		XCTAssertTrue(unreadArticleIDs.contains("5001"))
 	}
 
 	func testFailedSaveNeverMarksArticleRead() async {
@@ -106,9 +174,13 @@ import Secrets
 private extension MinifluxSaveForLaterTests {
 
 	func makeMinifluxAccountWithUnreadArticle() async -> Account {
+		await makeMinifluxAccount(unreadArticleIDs: ["5001"])
+	}
+
+	func makeMinifluxAccount(unreadArticleIDs: Set<String>) async -> Account {
 		let account = TestAccountManager.shared.createAccount(type: .miniflux)
 		account.endpointURL = URL(string: "https://miniflux.test")
-		await account.markAsUnreadAsync(articleIDs: ["5001"])
+		await account.markAsUnreadAsync(articleIDs: unreadArticleIDs)
 		return account
 	}
 }

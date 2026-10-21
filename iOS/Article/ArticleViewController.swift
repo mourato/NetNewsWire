@@ -59,6 +59,10 @@ final class ArticleViewController: UIViewController {
 		return item
 	}()
 
+	/// Before iOS 26, the flexible space that follows the Save for Later item. It hides with
+	/// the item, so the remaining items keep even spacing.
+	private lazy var saveForLaterSpaceBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
@@ -152,6 +156,9 @@ final class ArticleViewController: UIViewController {
 
 		if #available(iOS 26, *) {
 			toolbarItems?.insert(articleExtractorBarButtonItem, at: 5)
+			if let starIndex = toolbarItems?.firstIndex(of: starBarButtonItem) {
+				toolbarItems?.insert(saveForLaterBarButtonItem, at: starIndex + 1)
+			}
 		} else {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 			toolbarItems = [
@@ -159,15 +166,14 @@ final class ArticleViewController: UIViewController {
 				flex(),
 				starBarButtonItem,
 				flex(),
+				saveForLaterBarButtonItem,
+				saveForLaterSpaceBarButtonItem,
 				nextUnreadBarButtonItem,
 				flex(),
 				articleExtractorBarButtonItem,
 				flex(),
 				actionBarButtonItem
 			]
-		}
-		if let starIndex = toolbarItems?.firstIndex(of: starBarButtonItem) {
-			toolbarItems?.insert(saveForLaterBarButtonItem, at: starIndex + 1)
 		}
 
 		pageViewController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: [:])
@@ -282,12 +288,12 @@ final class ArticleViewController: UIViewController {
 			nextArticleBarButtonItem.isEnabled = false
 			readBarButtonItem.isEnabled = false
 			starBarButtonItem.isEnabled = false
-			saveForLaterBarButtonItem.isHidden = true
+			setSaveForLaterHidden(true)
 			actionBarButtonItem.isEnabled = false
 			return
 		}
 
-		saveForLaterBarButtonItem.isHidden = ![article].canSaveForLater()
+		setSaveForLaterHidden(![article].canSaveForLater())
 
 		nextUnreadBarButtonItem.isEnabled = coordinator.isNextUnreadAvailable
 		prevArticleBarButtonItem.isEnabled = coordinator.isPrevArticleAvailable
@@ -616,6 +622,11 @@ private extension ArticleViewController {
 
 	func syncArticleExtractorButtonState() {
 		articleExtractorButton.buttonState = currentWebViewController?.articleExtractorButtonState ?? .off
+	}
+
+	func setSaveForLaterHidden(_ hidden: Bool) {
+		saveForLaterBarButtonItem.isHidden = hidden
+		saveForLaterSpaceBarButtonItem.isHidden = hidden
 	}
 
 	func restoreOriginalPopGestureRecognizerDelegate() {
