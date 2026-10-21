@@ -158,7 +158,7 @@ import Secrets
 		await assertSaveFailureSurfacesCredentialsError(statusCode: HTTPResponseCode.forbidden)
 	}
 
-	func testFailedSaveNeverMarksArticleRead() async {
+	func testFailedSaveSurfacesSaveErrorAndNeverMarksArticleRead() async {
 		let account = await makeMinifluxAccountWithUnreadArticle()
 		defer { TestAccountManager.shared.deleteAccount(account) }
 		TestingURLProtocol.setResponse(.init(statusCode: 500), forURLContaining: "/v1/entries/5001/save", httpMethod: HTTPMethod.post)
@@ -167,13 +167,37 @@ import Secrets
 			try await account.saveArticlesForLater(articleIDs: ["5001"], markAsRead: true)
 			XCTFail("Expected the save to fail")
 		} catch {
-			guard case AccountError.wrappedError(let underlyingError, _, _, _) = error, case WebserviceError.httpError(let status, _) = underlyingError else {
-				XCTFail("Expected a wrapped HTTP error, got \(error)")
+			XCTAssertFalse(error is AccountError, "A save failure must not use the sync error wrapper")
+			XCTAssertEqual(error.localizedDescription, "The article couldn’t be saved for later. HTTP 500: internal server error")
+			XCTAssertFalse(error.localizedDescription.contains("syncing"))
+			guard case MinifluxError.saveForLaterRequestFailed(let underlyingError) = error, case WebserviceError.httpError(let status, _) = underlyingError else {
+				XCTFail("Expected a save-for-later HTTP error, got \(error)")
 				return
 			}
 			XCTAssertEqual(status, 500)
 		}
 
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: Self.saveURL, httpMethod: HTTPMethod.post), 1)
+		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		XCTAssertTrue(unreadArticleIDs.contains("5001"))
+	}
+
+	func testMissingServerAddressThrowsWithoutSendingOrMarkingRead() async {
+		let account = TestAccountManager.shared.createAccount(type: .miniflux)
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		await account.markAsUnreadAsync(articleIDs: ["5001"])
+		TestingURLProtocol.setResponse(.init(statusCode: 202), forURLContaining: "/save", httpMethod: HTTPMethod.post)
+
+		do {
+			try await account.saveArticlesForLater(articleIDs: ["5001"], markAsRead: true)
+			XCTFail("Expected a missing server error")
+		} catch MinifluxError.saveForLaterNoServer {
+			XCTAssertEqual(MinifluxError.saveForLaterNoServer.localizedDescription, "The article couldn’t be saved for later because this account has no Miniflux server address. Re-enter the account’s credentials, or remove the account and add it again.")
+		} catch {
+			XCTFail("Unexpected error: \(error)")
+		}
+
+		XCTAssertEqual(TestingURLProtocol.requestCount(forURLContaining: "/save"), 0)
 		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
 		XCTAssertTrue(unreadArticleIDs.contains("5001"))
 	}
