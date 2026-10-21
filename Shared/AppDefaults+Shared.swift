@@ -42,7 +42,6 @@ extension AppDefaults {
 		}
 	}
 
-
 	// MARK: - Article Summaries
 
 	/// The selected summarization provider. Defaults to the local Apple model on

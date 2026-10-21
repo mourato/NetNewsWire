@@ -28,7 +28,7 @@ enum ArticleSummaryProvider: Int, CaseIterable, Sendable {
 }
 
 /// Locally-owned, non-secret settings for the summary feature.
-@MainActor struct ArticleSummarySettings: Sendable {
+@MainActor struct ArticleSummarySettings {
 
 	let provider: ArticleSummaryProvider
 	let endpoint: String?

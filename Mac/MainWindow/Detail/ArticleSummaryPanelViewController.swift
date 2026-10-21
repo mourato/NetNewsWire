@@ -17,7 +17,8 @@ final class ArticleSummaryPanelViewController: NSViewController {
 
 	private let titleLabel = NSTextField(labelWithString: "")
 	private let spinner = NSProgressIndicator()
-	private let bodyLabel = NSTextField(wrappingLabelWithString: "")
+	private let bodyScrollView = NSScrollView()
+	private let bodyTextView = NSTextView()
 	private let dismissButton = NSButton()
 
 	override func loadView() {
@@ -34,8 +35,24 @@ final class ArticleSummaryPanelViewController: NSViewController {
 		spinner.controlSize = .small
 		spinner.widthAnchor.constraint(equalToConstant: 16).isActive = true
 
-		bodyLabel.font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: .regular))
-		bodyLabel.textColor = .labelColor
+		bodyTextView.isEditable = false
+		bodyTextView.isSelectable = true
+		bodyTextView.drawsBackground = false
+		bodyTextView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: .regular))
+		bodyTextView.textContainerInset = .zero
+		bodyTextView.isVerticallyResizable = true
+		bodyTextView.isHorizontallyResizable = false
+		bodyTextView.autoresizingMask = [.width]
+		bodyTextView.minSize = .zero
+		bodyTextView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+		bodyTextView.textContainer?.widthTracksTextView = true
+		bodyTextView.textContainer?.lineFragmentPadding = 0
+
+		bodyScrollView.documentView = bodyTextView
+		bodyScrollView.hasVerticalScroller = true
+		bodyScrollView.autohidesScrollers = true
+		bodyScrollView.drawsBackground = false
+		bodyScrollView.borderType = .noBorder
 
 		let symbolConfiguration = NSImage.SymbolConfiguration(textStyle: .body)
 		let dismissImage = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: NSLocalizedString("Dismiss Summary", comment: "Dismiss summary button"))?.withSymbolConfiguration(symbolConfiguration)
@@ -53,15 +70,15 @@ final class ArticleSummaryPanelViewController: NSViewController {
 		topStack.translatesAutoresizingMaskIntoConstraints = false
 
 		panelView.addSubview(topStack)
-		panelView.addSubview(bodyLabel)
+		panelView.addSubview(bodyScrollView)
 		topStack.leadingAnchor.constraint(equalTo: panelView.leadingAnchor, constant: 12).isActive = true
 		topStack.trailingAnchor.constraint(equalTo: panelView.trailingAnchor, constant: -12).isActive = true
 		topStack.topAnchor.constraint(equalTo: panelView.topAnchor, constant: 10).isActive = true
-		bodyLabel.translatesAutoresizingMaskIntoConstraints = false
-		bodyLabel.leadingAnchor.constraint(equalTo: panelView.leadingAnchor, constant: 12).isActive = true
-		bodyLabel.trailingAnchor.constraint(equalTo: panelView.trailingAnchor, constant: -12).isActive = true
-		bodyLabel.topAnchor.constraint(equalTo: topStack.bottomAnchor, constant: 6).isActive = true
-		bodyLabel.bottomAnchor.constraint(lessThanOrEqualTo: panelView.bottomAnchor, constant: -10).isActive = true
+		bodyScrollView.translatesAutoresizingMaskIntoConstraints = false
+		bodyScrollView.leadingAnchor.constraint(equalTo: panelView.leadingAnchor, constant: 12).isActive = true
+		bodyScrollView.trailingAnchor.constraint(equalTo: panelView.trailingAnchor, constant: -12).isActive = true
+		bodyScrollView.topAnchor.constraint(equalTo: topStack.bottomAnchor, constant: 6).isActive = true
+		bodyScrollView.bottomAnchor.constraint(equalTo: panelView.bottomAnchor, constant: -10).isActive = true
 
 		view = panelView
 	}
@@ -69,20 +86,26 @@ final class ArticleSummaryPanelViewController: NSViewController {
 	func display(_ displayState: ArticleSummaryDisplayState) {
 		switch displayState {
 		case .idle:
-			bodyLabel.stringValue = ""
+			setBodyText("", color: .labelColor)
 			spinner.stopAnimation(nil)
 		case .loading:
-			bodyLabel.stringValue = ""
+			setBodyText("", color: .labelColor)
 			spinner.startAnimation(nil)
 		case .finished(let text, _):
 			spinner.stopAnimation(nil)
-			bodyLabel.stringValue = text
-			bodyLabel.textColor = .labelColor
+			setBodyText(text, color: .labelColor)
 		case .failed(let errorDescription):
 			spinner.stopAnimation(nil)
-			bodyLabel.stringValue = errorDescription
-			bodyLabel.textColor = .secondaryLabelColor
+			setBodyText(errorDescription, color: .secondaryLabelColor)
 		}
+	}
+
+	private func setBodyText(_ text: String, color: NSColor) {
+		let attributes: [NSAttributedString.Key: Any] = [
+			.font: bodyTextView.font ?? NSFont.systemFont(ofSize: NSFont.systemFontSize(for: .regular)),
+			.foregroundColor: color
+		]
+		bodyTextView.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: attributes))
 	}
 
 	@objc private func dismissTapped() {

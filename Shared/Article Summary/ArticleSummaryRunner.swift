@@ -139,7 +139,7 @@ import os
 		let snapshotSettings = settings
 		let token = UUID()
 		runningArticleID = snapshotArticleID
-		let requestTask = Task { [weak self] () -> Void in
+		let requestTask = Task { [weak self] in
 			let result = await ArticleSummaryRunner.results(input: input, settings: snapshotSettings)
 			guard let self else {
 				return
