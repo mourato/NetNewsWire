@@ -496,6 +496,36 @@ import Secrets
 		}
 	}
 
+	var supportsSaveForLater: Bool {
+		true
+	}
+
+	/// Article IDs are Miniflux entry IDs. Validates every ID before sending anything,
+	/// so a bad ID can’t be reported as a successful save.
+	func saveArticlesForLater(articleIDs: Set<String>) async throws {
+		guard let account else {
+			throw AccountError.invalidParameter
+		}
+		var entryIDs = [Int64]()
+		for articleID in articleIDs {
+			guard let entryID = Int64(articleID) else {
+				throw AccountError.invalidParameter
+			}
+			entryIDs.append(entryID)
+		}
+
+		do {
+			for entryID in entryIDs {
+				try await caller.saveEntry(entryID: entryID)
+			}
+		} catch let error as MinifluxError {
+			// Already carries the server’s message; wrapping would present it as a sync error.
+			throw error
+		} catch {
+			throw AccountError.wrapped(error, account)
+		}
+	}
+
 	func accountDidInitialize() {
 		guard let account else {
 			return

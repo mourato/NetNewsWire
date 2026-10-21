@@ -64,6 +64,13 @@ extension TimelineViewController {
 		markArticles(articles, starred: false)
 	}
 
+	@objc func saveArticlesForLaterFromContextualMenu(_ sender: Any?) {
+		guard let articles = articles(from: sender) else {
+			return
+		}
+		saveForLater(articles)
+	}
+
 	@objc func selectFeedInSidebarFromContextualMenu(_ sender: Any?) {
 		guard let menuItem = sender as? NSMenuItem, let feed = menuItem.representedObject as? Feed else {
 			return
@@ -169,6 +176,11 @@ private extension TimelineViewController {
 			menu.addItem(markBelowReadMenuItem(articles))
 		}
 
+		if articles.canSaveForLater() {
+			menu.addSeparatorIfNeeded()
+			menu.addItem(saveForLaterMenuItem(articles))
+		}
+
 		menu.addSeparatorIfNeeded()
 
 		if articles.count == 1, let feed = articles.first!.feed {
@@ -247,6 +259,10 @@ private extension TimelineViewController {
 
 	func markBelowReadMenuItem(_ articles: [Article]) -> NSMenuItem {
 		menuItem(NSLocalizedString("Mark Below as Read", comment: "Command"), #selector(markBelowArticlesReadFromContextualMenu(_:)), articles)
+	}
+
+	func saveForLaterMenuItem(_ articles: [Article]) -> NSMenuItem {
+		menuItem(NSLocalizedString("Save for Later", comment: "Command"), #selector(saveArticlesForLaterFromContextualMenu(_:)), articles)
 	}
 
 	func selectFeedInSidebarMenuItem(_ feed: Feed) -> NSMenuItem {

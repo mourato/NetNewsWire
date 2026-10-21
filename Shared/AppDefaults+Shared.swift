@@ -9,13 +9,16 @@ import Foundation
 
 private extension AppDefaults.Key {
 	static let unreadCountDisplay = "unreadCountDisplay"
+
 	static let articleSummaryProvider = "articleSummaryProvider"
 	static let articleSummaryEndpoint = "articleSummaryEndpoint"
 	static let articleSummaryModel = "articleSummaryModel"
+	static let markArticlesReadWhenSavedForLater = "markArticlesReadWhenSavedForLater"
 }
 
 extension Notification.Name {
 	static let articleSummarySettingsDidChange = Notification.Name("ArticleSummarySettingsDidChangeNotification")
+
 }
 
 extension AppDefaults {
@@ -38,6 +41,7 @@ extension AppDefaults {
 			NotificationCenter.default.post(name: .unreadCountDisplaySettingDidChange, object: self)
 		}
 	}
+
 
 	// MARK: - Article Summaries
 
@@ -85,5 +89,15 @@ extension AppDefaults {
 
 	@MainActor var articleSummarySettings: ArticleSummarySettings {
 		ArticleSummarySettings(provider: articleSummaryProvider, endpoint: articleSummaryEndpoint, model: articleSummaryModel)
+	}
+
+	/// Off by default: saving an article for later leaves its read status alone.
+	var markArticlesReadWhenSavedForLater: Bool {
+		get {
+			UserDefaults.standard.bool(forKey: Key.markArticlesReadWhenSavedForLater)
+		}
+		set {
+			UserDefaults.standard.set(newValue, forKey: Key.markArticlesReadWhenSavedForLater)
+		}
 	}
 }

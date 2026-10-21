@@ -17,6 +17,7 @@ public enum AccountError: LocalizedError {
 	case invalidParameter
 	case invalidResponse
 	case urlNotFound
+	case saveForLaterNotSupported
 	case unknown
 	case wrappedError(error: Error, accountID: String, accountName: String, accountType: AccountType)
 
@@ -54,6 +55,8 @@ public enum AccountError: LocalizedError {
 			return NSLocalizedString("There was an invalid response from the server.", comment: "Invalid response")
 		case .urlNotFound:
 			return NSLocalizedString("The URL request resulted in a not found error.", comment: "URL not found")
+		case .saveForLaterNotSupported:
+			return NSLocalizedString("This account can’t save articles for later.", comment: "Save for Later not supported")
 		case .unknown:
 			return NSLocalizedString("Unknown error", comment: "Unknown error")
 		case .wrappedError(let error, _, let accountName, let accountType):

@@ -629,6 +629,24 @@ public enum FetchType {
 		try await delegate.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 	}
 
+	public var supportsSaveForLater: Bool {
+		delegate.supportsSaveForLater
+	}
+
+	/// Marks the articles read only after the save succeeds, and only when `markAsRead` is true.
+	/// Throws only for the save: once it succeeds, a failure to mark read is logged, not thrown.
+	public func saveArticlesForLater(articleIDs: Set<String>, markAsRead: Bool) async throws {
+		try await delegate.saveArticlesForLater(articleIDs: articleIDs)
+		guard markAsRead else {
+			return
+		}
+		do {
+			try await markArticles(articleIDs: articleIDs, statusKey: .read, flag: true)
+		} catch {
+			Self.logger.error("Account: saveArticlesForLater: saved, but marking read failed: \(error.localizedDescription, privacy: .public)")
+		}
+	}
+
 	func existingContainer(withExternalID externalID: String) -> Container? {
 		guard self.externalID != externalID else {
 			return self

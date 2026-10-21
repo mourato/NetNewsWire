@@ -53,6 +53,10 @@ import Secrets
 
 	func markArticles(articleIDs: Set<String>, statusKey: ArticleStatus.Key, flag: Bool) async throws
 
+	/// Whether the service can send articles to a save-for-later integration configured on the server.
+	var supportsSaveForLater: Bool { get }
+	func saveArticlesForLater(articleIDs: Set<String>) async throws
+
 	// Called at the end of account’s init method.
 	func accountDidInitialize()
 
@@ -67,4 +71,15 @@ import Secrets
 
 	/// Resume network activity after a previous `suspendNetwork()`.
 	func resume()
+}
+
+extension AccountDelegate {
+
+	var supportsSaveForLater: Bool {
+		false
+	}
+
+	func saveArticlesForLater(articleIDs: Set<String>) async throws {
+		throw AccountError.saveForLaterNotSupported
+	}
 }

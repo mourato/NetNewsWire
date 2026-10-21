@@ -65,6 +65,7 @@ struct Assets {
 			}
 		}()
 		static let share = RSImage(symbol: "square.and.arrow.up")!
+		static let saveForLater = RSImage(symbol: "tray.and.arrow.down") ?? share
 		static let folder = RSImage(symbol: "folder")!
 		static let starredFeed = IconImage(starClosed, isSymbol: true, isBackgroundSuppressed: true, preferredColor: Assets.Colors.star)
 

@@ -30,6 +30,24 @@ import Images
 	}
 }
 
+/// Sends articles to their account’s save-for-later integration. Marks them read
+/// afterward only when the user turned that setting on, and only if the save succeeded.
+@MainActor func saveArticlesForLater(_ articles: [Article]) async throws {
+	let markAsRead = AppDefaults.shared.markArticlesReadWhenSavedForLater
+	for (accountID, articleIDs) in articleIDsByAccountID(Set(articles)) {
+		guard let account = AccountManager.shared.existingAccount(accountID: accountID), account.supportsSaveForLater else {
+			continue
+		}
+		try await account.saveArticlesForLater(articleIDs: articleIDs, markAsRead: markAsRead)
+	}
+}
+
+extension Array where Element == Article {
+	@MainActor func canSaveForLater() -> Bool {
+		!isEmpty && allSatisfy { $0.account?.supportsSaveForLater ?? false }
+	}
+}
+
 private func articleIDsByAccountID(_ articles: Set<Article>) -> [String: Set<String>] {
 	let d = Dictionary(grouping: articles, by: { $0.accountID })
 	return d.mapValues { Set($0.articleIDs()) }

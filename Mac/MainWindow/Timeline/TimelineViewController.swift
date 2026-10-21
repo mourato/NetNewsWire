@@ -302,6 +302,25 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		return selectedArticles.canMarkAllAsRead()
 	}
 
+	func canSaveSelectedArticlesForLater() -> Bool {
+		selectedArticles.canSaveForLater()
+	}
+
+	func saveSelectedArticlesForLater() {
+		saveForLater(selectedArticles)
+	}
+
+	/// The toolbar and the contextual menu both save through here.
+	func saveForLater(_ articles: [Article]) {
+		Task { @MainActor in
+			do {
+				try await saveArticlesForLater(articles)
+			} catch {
+				ErrorHandler.present(error)
+			}
+		}
+	}
+
 	func representsThisObjectOnly(_ object: AnyObject) -> Bool {
 		guard let representedObjects = representedObjects else {
 			return false

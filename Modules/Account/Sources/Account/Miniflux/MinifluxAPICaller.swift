@@ -234,6 +234,28 @@ import Secrets
 		}
 	}
 
+	/// Sends the entry to the third-party integrations (such as a read-it-later service)
+	/// configured on the server. Unlike the bookmark toggle, this doesn’t change starred state.
+	/// On failure, surfaces the server’s `MinifluxErrorResponse` message (for example, when no
+	/// integration is enabled) as `MinifluxError.saveForLaterFailed`; otherwise a plain HTTP error.
+	func saveEntry(entryID: Int64) async throws {
+		var request = try makeRequest(path: "entries/\(entryID)/save")
+		request.httpMethod = HTTPMethod.post
+
+		let (data, urlResponse) = try await session.data(for: request)
+
+		let statusCode = urlResponse.forcedStatusCode
+		guard (200...399).contains(statusCode) else {
+			if statusCode == HTTPResponseCode.unauthorized || statusCode == HTTPResponseCode.forbidden {
+				throw WebserviceError.httpError(status: statusCode, responseBody: nil)
+			}
+			if let errorResponse = try? JSONDecoder().decode(MinifluxErrorResponse.self, from: data) {
+				throw MinifluxError.saveForLaterFailed(message: errorResponse.errorMessage)
+			}
+			throw WebserviceError.httpError(status: statusCode, responseBody: nil)
+		}
+	}
+
 	/// Synchronous — Miniflux’s OPML import doesn’t require polling for completion.
 	func importOPML(opmlData: Data) async throws {
 		var request = try makeRequest(path: "import")

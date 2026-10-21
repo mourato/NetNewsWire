@@ -58,6 +58,17 @@ final class ArticleViewController: UIViewController {
 		return barButtonItem
 	}
 
+	private lazy var saveForLaterBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: Assets.Images.saveForLater, style: .plain, target: self, action: #selector(saveForLater(_:)))
+		item.title = NSLocalizedString("Save for Later", comment: "Command")
+		item.accLabelText = item.title
+		return item
+	}()
+
+	/// Before iOS 26, the flexible space that follows the Save for Later item. It hides with
+	/// the item, so the remaining items keep even spacing.
+	private lazy var saveForLaterSpaceBarButtonItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
@@ -168,6 +179,10 @@ final class ArticleViewController: UIViewController {
 			} else {
 				toolbarItems?.append(summarizeBarButtonItem)
 			}
+
+			if let starIndex = toolbarItems?.firstIndex(of: starBarButtonItem) {
+				toolbarItems?.insert(saveForLaterBarButtonItem, at: starIndex + 1)
+			}
 		} else {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 			toolbarItems = [
@@ -175,6 +190,8 @@ final class ArticleViewController: UIViewController {
 				flex(),
 				starBarButtonItem,
 				flex(),
+				saveForLaterBarButtonItem,
+				saveForLaterSpaceBarButtonItem,
 				nextUnreadBarButtonItem,
 				flex(),
 				articleExtractorBarButtonItem,
@@ -300,9 +317,12 @@ final class ArticleViewController: UIViewController {
 			nextArticleBarButtonItem.isEnabled = false
 			readBarButtonItem.isEnabled = false
 			starBarButtonItem.isEnabled = false
+			setSaveForLaterHidden(true)
 			actionBarButtonItem.isEnabled = false
 			return
 		}
+
+		setSaveForLaterHidden(![article].canSaveForLater())
 
 		nextUnreadBarButtonItem.isEnabled = coordinator.isNextUnreadAvailable
 		prevArticleBarButtonItem.isEnabled = coordinator.isPrevArticleAvailable
@@ -394,6 +414,10 @@ final class ArticleViewController: UIViewController {
 
 	@IBAction func toggleStar(_ sender: Any) {
 		coordinator.toggleStarredForCurrentArticle()
+	}
+
+	@objc func saveForLater(_ sender: Any) {
+		coordinator.saveCurrentArticleForLater()
 	}
 
 	@IBAction func showActivityDialog(_ sender: Any) {
@@ -689,6 +713,11 @@ private extension ArticleViewController {
 
 	func syncArticleExtractorButtonState() {
 		articleExtractorButton.buttonState = currentWebViewController?.articleExtractorButtonState ?? .off
+	}
+
+	func setSaveForLaterHidden(_ hidden: Bool) {
+		saveForLaterBarButtonItem.isHidden = hidden
+		saveForLaterSpaceBarButtonItem.isHidden = hidden
 	}
 
 	func restoreOriginalPopGestureRecognizerDelegate() {
