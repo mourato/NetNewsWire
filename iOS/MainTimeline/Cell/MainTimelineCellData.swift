@@ -23,14 +23,13 @@ import Images
 	let feedName: String
 	let byline: String
 	let showFeedName: ShowFeedName
-	let iconImage: IconImage? // feed icon, user avatar, or favicon
-	let showIcon: Bool // Make space even when icon is nil
+	let thumbnailImage: IconImage? // article thumbnail, or a fallback feed icon/avatar/favicon
+	let showsThumbnail: Bool // Make space even when thumbnail is nil
 	let read: Bool
 	let starred: Bool
 	let numberOfLines: Int
-	let iconSize: IconSize
 
-	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool, numberOfLines: Int, iconSize: IconSize) {
+	init(article: Article, showFeedName: ShowFeedName, feedName: String?, byline: String?, thumbnailImage: IconImage?, showsThumbnail: Bool, numberOfLines: Int) {
 
 		self.accountID = article.accountID
 		self.articleID = article.articleID
@@ -60,13 +59,12 @@ import Images
 
 		self.showFeedName = showFeedName
 
-		self.showIcon = showIcon
-		self.iconImage = iconImage
+		self.thumbnailImage = thumbnailImage
+		self.showsThumbnail = showsThumbnail
 
 		self.read = article.status.read
 		self.starred = article.status.starred
 		self.numberOfLines = numberOfLines
-		self.iconSize = iconSize
 
 	}
 
@@ -80,12 +78,11 @@ import Images
 		self.feedName = ""
 		self.byline = ""
 		self.showFeedName = .none
-		self.showIcon = false
-		self.iconImage = nil
+		self.thumbnailImage = nil
+		self.showsThumbnail = false
 		self.read = true
 		self.starred = false
 		self.numberOfLines = 0
-		self.iconSize = .medium
 	}
 
 }

@@ -54,7 +54,8 @@ final class SettingsViewController: UITableViewController {
 		case theme = 0
 		case openLinksInNetNewsWire = 1
 		case enableJavaScript = 2
-		case enableFullScreenArticles = 3
+		case articleSummaries = 3
+		case enableFullScreenArticles = 4
 	}
 
 	private enum HelpRow: Int {
@@ -279,6 +280,9 @@ final class SettingsViewController: UITableViewController {
 			case .theme:
 				let articleThemes = UIStoryboard.settings.instantiateController(ofType: ArticleThemesTableViewController.self)
 				self.navigationController?.pushViewController(articleThemes, animated: true)
+			case .articleSummaries:
+				let summariesView = SummarySettingsView()
+				self.navigationController?.pushViewController(UIHostingController(rootView: summariesView), animated: true)
 			default:
 				break
 			}

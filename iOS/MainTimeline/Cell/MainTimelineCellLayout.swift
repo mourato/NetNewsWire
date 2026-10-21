@@ -14,7 +14,7 @@ import Images
 	var height: CGFloat { get }
 	var unreadIndicatorRect: CGRect { get }
 	var starRect: CGRect { get }
-	var iconImageRect: CGRect { get }
+	var thumbnailRect: CGRect { get }
 	var titleRect: CGRect { get }
 	var summaryRect: CGRect { get }
 	var feedNameRect: CGRect { get }
@@ -41,11 +41,11 @@ extension MainTimelineCellLayout {
 		return r
 	}
 
-	static func rectForIconView(_ point: CGPoint, iconSize: IconSize) -> CGRect {
+	static func rectForThumbnail(_ trailingEdge: CGFloat) -> CGRect {
 		var r = CGRect.zero
-		r.size = iconSize.size
-		r.origin.x = point.x
-		r.origin.y = point.y + 4
+		r.size = CGSize(width: MainTimelineDefaultCellLayout.thumbnailDimension, height: MainTimelineDefaultCellLayout.thumbnailDimension)
+		r.origin.x = trailingEdge - MainTimelineDefaultCellLayout.thumbnailDimension
+		r.origin.y = MainTimelineDefaultCellLayout.cellPadding.top
 		return r
 	}
 
@@ -105,8 +105,11 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 
 	static let starDimension = CGFloat(16)
 
-	static let iconMarginRight = CGFloat(8)
-	static let iconCornerRadius = CGFloat(4)
+	/// Measured from the reference screenshot at 2x: ~196 px square, small right inset.
+	static let thumbnailDimension = CGFloat(96)
+	static let thumbnailMarginLeft = CGFloat(8)
+	static let thumbnailMarginRight = CGFloat(12)
+	static let thumbnailCornerRadius = CGFloat(6)
 
 	static var titleFont: UIFont { UIFont.preferredFont(forTextStyle: .headline) }
 	static let titleBottomMargin = CGFloat(1)
@@ -122,7 +125,7 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 	let height: CGFloat
 	let unreadIndicatorRect: CGRect
 	let starRect: CGRect
-	let iconImageRect: CGRect
+	let thumbnailRect: CGRect
 	let titleRect: CGRect
 	let summaryRect: CGRect
 	let feedNameRect: CGRect
@@ -140,14 +143,14 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 
 		currentPoint.x += Self.unreadCircleDimension + Self.unreadCircleMarginRight
 
-		if cellData.showIcon {
-			self.iconImageRect = Self.rectForIconView(currentPoint, iconSize: cellData.iconSize)
-			currentPoint.x = self.iconImageRect.maxX + Self.iconMarginRight
-		} else {
-			self.iconImageRect = CGRect.zero
-		}
+		let thumbnailRect = cellData.showsThumbnail ? Self.rectForThumbnail(width - insets.right - Self.thumbnailMarginRight) : CGRect.zero
+		self.thumbnailRect = thumbnailRect
 
-		let textAreaWidth = width - (currentPoint.x + Self.cellPadding.right + insets.right)
+		var textRightEdge = width - Self.cellPadding.right - insets.right
+		if cellData.showsThumbnail {
+			textRightEdge = min(textRightEdge, thumbnailRect.minX - Self.thumbnailMarginLeft)
+		}
+		let textAreaWidth = max(0, textRightEdge - currentPoint.x)
 		self.separatorRect = CGRect(x: currentPoint.x, y: 0, width: textAreaWidth, height: 0)
 
 		let (titleRect, numberOfLinesForTitle) = Self.rectForTitle(cellData, currentPoint, textAreaWidth)
@@ -158,9 +161,9 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 		}
 		self.summaryRect = Self.rectForSummary(cellData, currentPoint, textAreaWidth, numberOfLinesForTitle)
 
-		var y = [self.titleRect, self.summaryRect].maxY()
+		var y = [self.titleRect, self.summaryRect, thumbnailRect].maxY()
 		if y == 0 {
-			y = iconImageRect.origin.y + iconImageRect.height
+			y = thumbnailRect.origin.y + thumbnailRect.height
 			let tmp = Self.rectForDate(cellData, currentPoint, textAreaWidth)
 			y -= tmp.height
 		}
@@ -171,7 +174,7 @@ struct MainTimelineDefaultCellLayout: MainTimelineCellLayout {
 		let feedNameWidth = textAreaWidth - (Self.feedRightMargin + self.dateRect.size.width)
 		self.feedNameRect = Self.rectForFeedName(cellData, currentPoint, feedNameWidth)
 
-		self.height = [self.iconImageRect, self.feedNameRect, self.dateRect].maxY() + Self.cellPadding.bottom
+		self.height = [self.thumbnailRect, self.feedNameRect, self.dateRect].maxY() + Self.cellPadding.bottom
 	}
 
 	static func rectForDate(_ cellData: MainTimelineCellData, _ point: CGPoint, _ textAreaWidth: CGFloat) -> CGRect {
@@ -191,7 +194,7 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 	let height: CGFloat
 	let unreadIndicatorRect: CGRect
 	let starRect: CGRect
-	let iconImageRect: CGRect
+	let thumbnailRect: CGRect
 	let titleRect: CGRect
 	let summaryRect: CGRect
 	let feedNameRect: CGRect
@@ -209,14 +212,14 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 
 		currentPoint.x += MainTimelineDefaultCellLayout.unreadCircleDimension + MainTimelineDefaultCellLayout.unreadCircleMarginRight
 
-		if cellData.showIcon {
-			self.iconImageRect = Self.rectForIconView(currentPoint, iconSize: cellData.iconSize)
-			currentPoint.y = self.iconImageRect.maxY
-		} else {
-			self.iconImageRect = CGRect.zero
-		}
+		let thumbnailRect = cellData.showsThumbnail ? Self.rectForThumbnail(width - insets.right - MainTimelineDefaultCellLayout.thumbnailMarginRight) : CGRect.zero
+		self.thumbnailRect = thumbnailRect
 
-		let textAreaWidth = width - (currentPoint.x + MainTimelineDefaultCellLayout.cellPadding.right + insets.right)
+		var textRightEdge = width - MainTimelineDefaultCellLayout.cellPadding.right - insets.right
+		if cellData.showsThumbnail {
+			textRightEdge = min(textRightEdge, thumbnailRect.minX - MainTimelineDefaultCellLayout.thumbnailMarginLeft)
+		}
+		let textAreaWidth = max(0, textRightEdge - currentPoint.x)
 		self.separatorRect = CGRect(x: currentPoint.x, y: 0, width: textAreaWidth, height: 0)
 
 		let (titleRect, numberOfLinesForTitle) = Self.rectForTitle(cellData, currentPoint, textAreaWidth)
@@ -227,7 +230,7 @@ struct MainTimelineAccessibilityCellLayout: MainTimelineCellLayout {
 		}
 		self.summaryRect = Self.rectForSummary(cellData, currentPoint, textAreaWidth, numberOfLinesForTitle)
 
-		currentPoint.y = [self.titleRect, self.summaryRect].maxY()
+		currentPoint.y = [self.titleRect, self.summaryRect, thumbnailRect].maxY()
 
 		if cellData.showFeedName != .none {
 			self.feedNameRect = Self.rectForFeedName(cellData, currentPoint, textAreaWidth)

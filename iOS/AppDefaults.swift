@@ -32,8 +32,8 @@ enum UserInterfaceColorPalette: Int, CustomStringConvertible, CaseIterable {
 
 extension Notification.Name {
 	public static let userInterfaceColorPaletteDidUpdate = Notification.Name("UserInterfaceColorPaletteDidUpdateNotification")
-	public static let timelineIconSizeDidChange = Notification.Name("TimelineIconSizeDidChangeNotification")
 	public static let timelineNumberOfLinesDidChange = Notification.Name("TimelineNumberOfLinesDidChangeNotification")
+	public static let timelineShowsArticleImageDidChange = Notification.Name("TimelineShowsArticleImageDidChangeNotification")
 }
 
 final class AppDefaults: Sendable {
@@ -56,7 +56,7 @@ final class AppDefaults: Sendable {
 		static let timelineGroupByFeed = "timelineGroupByFeed"
 		static let refreshClearsReadArticles = "refreshClearsReadArticles"
 		static let timelineNumberOfLines = "timelineNumberOfLines"
-		static let timelineIconDimension = "timelineIconSize"
+		static let timelineShowsArticleImage = "timelineShowsArticleImage"
 		static let timelineSortDirection = "timelineSortDirection"
 		static let articleFullscreenAvailable = "articleFullscreenAvailable"
 		static let articleFullscreenEnabled = "articleFullscreenEnabled"
@@ -279,14 +279,14 @@ final class AppDefaults: Sendable {
 		}
 	}
 
-	var timelineIconSize: IconSize {
+	/// Shows a square article thumbnail at the trailing edge of timeline rows.
+	var timelineShowsArticleImage: Bool {
 		get {
-			let rawValue = AppDefaults.store.integer(forKey: Key.timelineIconDimension)
-			return IconSize(rawValue: rawValue) ?? IconSize.medium
+			return AppDefaults.store.bool(forKey: Key.timelineShowsArticleImage)
 		}
 		set {
-			AppDefaults.store.set(newValue.rawValue, forKey: Key.timelineIconDimension)
-			NotificationCenter.default.post(name: .timelineIconSizeDidChange, object: nil)
+			AppDefaults.store.set(newValue, forKey: Key.timelineShowsArticleImage)
+			NotificationCenter.default.post(name: .timelineShowsArticleImageDidChange, object: nil)
 		}
 	}
 
@@ -424,7 +424,7 @@ final class AppDefaults: Sendable {
 										Key.timelineGroupByFeed: false,
 										Key.refreshClearsReadArticles: false,
 										Key.timelineNumberOfLines: 2,
-										Key.timelineIconDimension: IconSize.medium.rawValue,
+										Key.timelineShowsArticleImage: true,
 										Key.timelineSortDirection: ComparisonResult.orderedDescending.rawValue,
 										Key.articleFullscreenAvailable: false,
 										Key.articleFullscreenEnabled: false,

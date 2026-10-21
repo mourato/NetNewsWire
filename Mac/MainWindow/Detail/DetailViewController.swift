@@ -61,6 +61,11 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		}
 	}
 
+	private var summaryPanelController: ArticleSummaryPanelViewController?
+	private let summaryRunner = ArticleSummaryRunner()
+	private var summaryArticleID: String?
+	private static let summaryPanelHeight: CGFloat = 150
+
 	convenience init() {
 		self.init(nibName: "DetailView", bundle: nil)
 	}
@@ -72,6 +77,8 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	// MARK: - API
 
 	func setState(_ state: DetailState, mode: TimelineSourceMode) {
+		// A different displayed article invalidates any in-flight or shown summary.
+		cancelSummaryIfArticleChanged(to: state)
 		switch mode {
 		case .regular:
 			detailStateForRegular = state
@@ -115,6 +122,96 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 			return
 		}
 		window.makeFirstResponderUnlessDescendantIsFirstResponder(currentWebViewController.webView)
+	}
+
+	// MARK: - Summaries
+
+	private var currentArticle: Article? {
+		viewIfLoaded == nil ? nil : currentWebViewController.article
+	}
+
+	@objc func summarizeArticle(_ sender: Any?) {
+		guard let article = currentArticle else {
+			return
+		}
+		summaryArticleID = article.articleID
+		summaryRunner.onStateChange = { [weak self] displayState in
+			self?.handleSummaryStateChange(displayState)
+		}
+		summaryRunner.summarize(input: ArticleSummaryInput(article: article), settings: AppDefaults.shared.articleSummarySettings)
+	}
+
+	private func handleSummaryStateChange(_ displayState: ArticleSummaryDisplayState) {
+		switch displayState {
+		case .idle:
+			tearDownSummaryPanel()
+		default:
+			let panel = ensureSummaryPanel()
+			panel.display(displayState)
+		}
+	}
+
+	private func ensureSummaryPanel() -> ArticleSummaryPanelViewController {
+		if let summaryPanelController {
+			return summaryPanelController
+		}
+		let panel = ArticleSummaryPanelViewController()
+		summaryPanelController = panel
+		addChild(panel)
+		panel.view.translatesAutoresizingMaskIntoConstraints = false
+		view.addSubview(panel.view, positioned: .above, relativeTo: nil)
+		let safeArea = view.safeAreaLayoutGuide
+		NSLayoutConstraint.activate([
+			panel.view.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+			panel.view.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+			panel.view.topAnchor.constraint(equalTo: safeArea.topAnchor),
+			panel.view.heightAnchor.constraint(equalToConstant: Self.summaryPanelHeight)
+		])
+		// The panel takes space above the article instead of covering its text.
+		containerView.topContentPadding = Self.summaryPanelHeight
+		panel.onDismiss = { [weak self] in
+			self?.cancelSummary()
+		}
+		return panel
+	}
+
+	private func tearDownSummaryPanel() {
+		summaryPanelController?.view.removeFromSuperview()
+		summaryPanelController?.removeFromParent()
+		summaryPanelController = nil
+		containerView.topContentPadding = 0
+	}
+
+	private func cancelSummary() {
+		summaryRunner.onStateChange = nil
+		summaryRunner.cancel()
+		tearDownSummaryPanel()
+		summaryArticleID = nil
+	}
+
+	private func cancelSummaryIfArticleChanged(to state: DetailState) {
+		let nextArticleID: String?
+		switch state {
+		case .article(let article, _), .extracted(let article, _, _):
+			nextArticleID = article.articleID
+		default:
+			nextArticleID = nil
+		}
+		if nextArticleID != summaryArticleID {
+			cancelSummary()
+		}
+	}
+}
+
+// MARK: - NSMenuItemValidation
+
+extension DetailViewController: NSMenuItemValidation {
+
+	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+		if menuItem.action == #selector(summarizeArticle(_:)) {
+			return currentArticle != nil
+		}
+		return true
 	}
 }
 

@@ -39,7 +39,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	private var cachedTimelineLines: Int = AppDefaults.shared.timelineNumberOfLines
-	private var cachedIconSize: IconSize = AppDefaults.shared.timelineIconSize
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -51,11 +50,6 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 				if AppDefaults.shared.timelineNumberOfLines != self.cachedTimelineLines {
 					self.cachedTimelineLines = AppDefaults.shared.timelineNumberOfLines
-					self.userDefaultsDidChange()
-				}
-
-				if AppDefaults.shared.timelineIconSize != self.cachedIconSize {
-					self.cachedIconSize = AppDefaults.shared.timelineIconSize
 					self.userDefaultsDidChange()
 				}
 			}
@@ -72,6 +66,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 		)
 
 		collectionView.register(MainTimelineCell.self, forCellWithReuseIdentifier: MainTimelineCell.reuseIdentifier)
+		collectionView.register(TimelineImageToggleCell.self, forCellWithReuseIdentifier: TimelineImageToggleCell.reuseIdentifier)
 
 		var config = UICollectionLayoutListConfiguration(appearance: .insetGrouped)
 		config.showsSeparators = false
@@ -89,15 +84,13 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     }
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        // #warning Incomplete implementation, return the number of items
         return 1
     }
 
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 
 		if indexPath.section == 0 {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "IconSizeSelector", for: indexPath) as! TimelineCustomizerCell
-			cell.sliderConfiguration = .iconSize
+			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TimelineImageToggleCell.reuseIdentifier, for: indexPath) as! TimelineImageToggleCell
 			return cell
 		}
 
@@ -109,28 +102,14 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 		if indexPath.section == 2 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(article: previewArticle,
-												 showFeedName: .byline,
-												 feedName: "The Fellowship of the Ring",
-												 byline: "J. R. R. Tolkien",
-												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
-												 showIcon: false,
-												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-												 iconSize: AppDefaults.shared.timelineIconSize)
+			cell.cellData = makePreviewCellData(showsThumbnail: false)
 			cell.isPreview = true
 			return cell
 		}
 
 		if indexPath.section == 3 {
 			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath) as! MainTimelineCell
-			cell.cellData = MainTimelineCellData(article: previewArticle,
-												 showFeedName: .byline,
-												 feedName: "The Fellowship of the Ring",
-												 byline: "J. R. R. Tolkien",
-												 iconImage: IconImage(Assets.Images.nnwFeedIcon),
-												 showIcon: true,
-												 numberOfLines: AppDefaults.shared.timelineNumberOfLines,
-												 iconSize: AppDefaults.shared.timelineIconSize)
+			cell.cellData = makePreviewCellData(showsThumbnail: true)
 			cell.isPreview = true
 			return cell
 		}
@@ -138,6 +117,18 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MainTimelineCell.reuseIdentifier, for: indexPath)
         return cell
     }
+
+	private func makePreviewCellData(showsThumbnail: Bool) -> MainTimelineCellData {
+		// The preview shows the placeholder feed icon in the thumbnail slot, since a fake
+		// article in a real Article model cannot carry a real image URL.
+		MainTimelineCellData(article: previewArticle,
+							 showFeedName: .byline,
+							 feedName: "The Fellowship of the Ring",
+							 byline: "J. R. R. Tolkien",
+							 thumbnailImage: IconImage(Assets.Images.nnwFeedIcon),
+							 showsThumbnail: showsThumbnail,
+							 numberOfLines: AppDefaults.shared.timelineNumberOfLines)
+	}
 
 	// MARK: UICollectionViewDelegate
 
@@ -156,13 +147,13 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 
 		switch indexPath.section {
 		case 0:
-			header.label.text = NSLocalizedString("Icon Size", comment: "Icon Size")
+			header.label.text = NSLocalizedString("Article Images", comment: "Article Images")
 		case 1:
 			header.label.text = NSLocalizedString("Number of Lines", comment: "Number of Lines")
 		case 2:
-			header.label.text = NSLocalizedString("No Icon Preview", comment: "No Icon Preview")
+			header.label.text = NSLocalizedString("No Image Preview", comment: "No Image Preview")
 		case 3:
-			header.label.text = NSLocalizedString("Icon Preview", comment: "Icon Preview")
+			header.label.text = NSLocalizedString("Image Preview", comment: "Image Preview")
 		default:
 			header.label.text = NSLocalizedString("", comment: "")
 		}
@@ -175,10 +166,7 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
 	}
 
 	override func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
-		if indexPath.section > 1 {
-			return false
-		}
-		return true
+		return false
 	}
 
 	// MARK: Notifications

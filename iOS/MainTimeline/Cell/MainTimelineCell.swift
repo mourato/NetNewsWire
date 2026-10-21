@@ -21,7 +21,7 @@ final class MainTimelineCell: UICollectionViewCell {
 	private let summaryView = MainTimelineCell.multiLineLabel()
 	private let dateView = MainTimelineCell.singleLineLabel()
 	private let feedNameView = MainTimelineCell.singleLineLabel()
-	private lazy var iconView = IconView()
+	private lazy var thumbnailView = IconView()
 	private lazy var indicatorView = IconView()
 	private let topSeparator = UIView()
 
@@ -44,6 +44,8 @@ final class MainTimelineCell: UICollectionViewCell {
 	override func prepareForReuse() {
 		super.prepareForReuse()
 		indicatorView.isHidden = true
+		thumbnailView.iconImage = nil
+		thumbnailView.isHidden = true
 	}
 
 	override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
@@ -64,7 +66,7 @@ final class MainTimelineCell: UICollectionViewCell {
 		setFrame(for: summaryView, rect: layout.summaryRect)
 		feedNameView.setFrameIfNotEqual(layout.feedNameRect)
 		dateView.setFrameIfNotEqual(layout.dateRect)
-		iconView.setFrameIfNotEqual(layout.iconImageRect)
+		thumbnailView.setFrameIfNotEqual(layout.thumbnailRect)
 		indicatorView.setFrameIfNotEqual(cellData.starred ? layout.starRect : layout.unreadIndicatorRect)
 		topSeparator.frame = CGRect(x: layout.separatorRect.minX, y: 0, width: layout.separatorRect.width, height: 1.0 / traitCollection.displayScale)
 	}
@@ -129,8 +131,8 @@ final class MainTimelineCell: UICollectionViewCell {
 		updateIndicatorView(active: showsAccentSelection)
 	}
 
-	func setIconImage(_ image: IconImage) {
-		iconView.iconImage = image
+	func setThumbnailImage(_ image: IconImage) {
+		thumbnailView.iconImage = image
 	}
 }
 
@@ -158,11 +160,12 @@ private extension MainTimelineCell {
 	func commonInit() {
 		isAccessibilityElement = true
 		topSeparator.backgroundColor = .separator.withAlphaComponent(0.1)
-		for view in [titleView, summaryView, dateView, feedNameView, iconView, indicatorView, topSeparator] {
+		for view in [titleView, summaryView, dateView, feedNameView, thumbnailView, indicatorView, topSeparator] {
 			contentView.addSubview(view)
 			view.isAccessibilityElement = false
 		}
 		indicatorView.isHidden = true
+		thumbnailView.isHidden = true
 	}
 
 	func updatedLayout(width: CGFloat) -> MainTimelineCellLayout {
@@ -207,12 +210,12 @@ private extension MainTimelineCell {
 			feedNameView.isHidden = true
 		}
 
-		if cellData.showIcon, let iconImage = cellData.iconImage {
-			iconView.iconImage = iconImage
-			iconView.isHidden = false
+		if cellData.showsThumbnail, let thumbnailImage = cellData.thumbnailImage {
+			thumbnailView.iconImage = thumbnailImage
+			thumbnailView.isHidden = false
 		} else {
-			iconView.iconImage = nil
-			iconView.isHidden = true
+			thumbnailView.iconImage = nil
+			thumbnailView.isHidden = true
 		}
 
 		let active = isActiveSelection(configurationState)

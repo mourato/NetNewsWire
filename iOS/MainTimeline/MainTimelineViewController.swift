@@ -20,7 +20,8 @@ final class MainTimelineViewController: UIViewController, UndoableCommandRunner 
 
 	// MARK: Private Variables
 	private var numberOfTextLines = 0
-	private var iconSize = IconSize.medium
+	private var showsArticleImage = AppDefaults.shared.timelineShowsArticleImage
+	private let thumbnailImageCache = NSCache<NSString, IconImage>()
 	private lazy var feedTapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(showFeedInspector(_:)))
 	private lazy var filterButton = UIBarButtonItem(image: Assets.Images.filter, style: .plain, target: self, action: #selector(toggleFilter(_:)))
 	private lazy var nextUnreadButton = UIBarButtonItem(image: Assets.Images.nextUnread, style: .plain, target: self, action: #selector(nextUnread(_:)))
@@ -35,9 +36,9 @@ final class MainTimelineViewController: UIViewController, UndoableCommandRunner 
 		return coordinator?.timelineFeed
 	}
 
-	private var showIcons: Bool {
+	private var showFeedNames: ShowFeedName {
 		assert(coordinator != nil)
-		return coordinator?.showIcons ?? false
+		return coordinator?.showFeedNames ?? .none
 	}
 
 	private var currentArticle: Article? {
@@ -188,7 +189,7 @@ final class MainTimelineViewController: UIViewController, UndoableCommandRunner 
 		definesPresentationContext = true
 
 		numberOfTextLines = AppDefaults.shared.timelineNumberOfLines
-		iconSize = AppDefaults.shared.timelineIconSize
+		showsArticleImage = AppDefaults.shared.timelineShowsArticleImage
 
 		assert(collectionView?.refreshControl != nil)
 		collectionView?.refreshControl = UIRefreshControl()
@@ -698,8 +699,9 @@ private extension MainTimelineViewController {
 		// lets us know that it’s time to request an image.
 		NotificationCenter.default.addObserver(self, selector: #selector(faviconDidBecomeAvailable(_:)), name: .htmlMetadataAvailable, object: nil)
 
-		NotificationCenter.default.addObserver(self, selector: #selector(timelineIconSizeDidChange(_:)), name: .timelineIconSizeDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(timelineNumberOfLinesDidChange(_:)), name: .timelineNumberOfLinesDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(timelineShowsArticleImageDidChange(_:)), name: .timelineShowsArticleImageDidChange, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(imageDidBecomeAvailable(_:)), name: .imageDidBecomeAvailable, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryDidChange), name: UIContentSizeCategory.didChangeNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(displayNameDidChange), name: .DisplayNameDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -914,18 +916,38 @@ private extension MainTimelineViewController {
 
 	@discardableResult
 	private func configure(article: Article) -> MainTimelineCellData {
-		let iconImage = iconImageFor(article)
+		let thumbnail = thumbnailFor(article)
 		let showFeedNames = coordinator?.showFeedNames ?? ShowFeedName.none
-		let showIcon = showIcons && iconImage != nil
-		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcon, numberOfLines: numberOfTextLines, iconSize: iconSize)
+		let cellData = MainTimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), thumbnailImage: thumbnail, showsThumbnail: thumbnail != nil, numberOfLines: numberOfTextLines)
 		return cellData
 	}
 
-	private func iconImageFor(_ article: Article) -> IconImage? {
-		if !showIcons {
+	/// Article image first (via ImageDownloader, which fetches/caches on demand),
+	/// feed icon/avatar/favicon as fallback, and none when nothing is available.
+	private func thumbnailFor(_ article: Article) -> IconImage? {
+		guard showsArticleImage else {
 			return nil
 		}
+		if let imageURLString = article.imageURL?.absoluteString {
+			if let cachedImage = cachedThumbnailImage(for: imageURLString) {
+				return cachedImage
+			}
+			// Requesting kicks off the (deduplicated) download; a nil return means later.
+			_ = ImageDownloader.shared.image(for: imageURLString)
+		}
 		return article.iconImage()
+	}
+
+	private func cachedThumbnailImage(for urlString: String) -> IconImage? {
+		if let cached = thumbnailImageCache.object(forKey: urlString as NSString) {
+			return cached
+		}
+		guard let data = ImageDownloader.shared.image(for: urlString), let image = RSImage(data: data) else {
+			return nil
+		}
+		let iconImage = IconImage(image)
+		thumbnailImageCache.setObject(iconImage, forKey: urlString as NSString)
+		return iconImage
 	}
 
 	func searchArticles(_ searchString: String, _ searchScope: SearchScope) {
@@ -1080,20 +1102,28 @@ private extension MainTimelineViewController {
 		queueReloadAvailableCells()
 	}
 
-	@objc func timelineIconSizeDidChange(_ note: Notification) {
-		Self.logger.debug("MainTimelineViewController: timelineIconSizeDidChange")
-		if iconSize != AppDefaults.shared.timelineIconSize {
-			iconSize = AppDefaults.shared.timelineIconSize
-			reloadVisibleCells()
-		}
-	}
-
 	@objc func timelineNumberOfLinesDidChange(_ note: Notification) {
 		Self.logger.debug("MainTimelineViewController: timelineNumberOfLinesDidChange")
 		if numberOfTextLines != AppDefaults.shared.timelineNumberOfLines {
 			numberOfTextLines = AppDefaults.shared.timelineNumberOfLines
 			reloadVisibleCells()
 		}
+	}
+
+	@objc func timelineShowsArticleImageDidChange(_ note: Notification) {
+		Self.logger.debug("MainTimelineViewController: timelineShowsArticleImageDidChange")
+		if showsArticleImage != AppDefaults.shared.timelineShowsArticleImage {
+			showsArticleImage = AppDefaults.shared.timelineShowsArticleImage
+			if !showsArticleImage {
+				thumbnailImageCache.removeAllObjects()
+			}
+			reloadVisibleCells()
+		}
+	}
+
+	@objc func imageDidBecomeAvailable(_ note: Notification) {
+		// Only a thumbnail URL affects the visible rows; reload cheaply and let layout reflow.
+		queueReloadAvailableCells()
 	}
 
 	@objc func contentSizeCategoryDidChange(_ note: Notification) {

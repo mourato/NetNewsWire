@@ -52,15 +52,31 @@ final class ArticleViewController: UIViewController {
 		return button
 	}()
 
+	private static func summarizeBarButtonItem(target: Any?, action: Selector) -> UIBarButtonItem {
+		let barButtonItem = UIBarButtonItem(image: UIImage(systemName: "sparkles"), style: .plain, target: target, action: action)
+		barButtonItem.accLabelText = NSLocalizedString("Summarize Article", comment: "Summarize Article")
+		return barButtonItem
+	}
+
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
 	private weak var originalPopGestureRecognizerDelegate: UIGestureRecognizerDelegate?
 	private static let logger = Logger(subsystem: Logger.nnwSubsystem, category: "ArticleViewController")
 
+	private weak var summaryPanelView: ArticleSummaryPanelView?
+	private let summaryRunner = ArticleSummaryRunner()
+	private var pageTopLayoutConstraint: NSLayoutConstraint?
+	private var summaryPageTopConstraint: NSLayoutConstraint?
+
 	var article: Article? {
 		didSet {
 			Self.logger.debug("ArticleViewController: article didSet: \(self.article?.accountID ?? "nil") \(self.article?.articleID ?? "nil") \(self.article?.title ?? "nil")")
+
+			// A different article invalidates any in-flight or displayed summary.
+			if oldValue?.articleID != article?.articleID || oldValue?.accountID != article?.accountID {
+				cancelSummary()
+			}
 
 			if oldValue != article {
 				// The launch-restoration scroll position belongs only to the restored article.
@@ -142,9 +158,16 @@ final class ArticleViewController: UIViewController {
 
 		articleExtractorButton.addTarget(self, action: #selector(toggleArticleExtractor(_:)), for: .touchUpInside)
 		let articleExtractorBarButtonItem = UIBarButtonItem(customView: articleExtractorButton)
+		let summarizeBarButtonItem = Self.summarizeBarButtonItem(target: self, action: #selector(summarizeArticle(_:)))
 
 		if #available(iOS 26, *) {
 			toolbarItems?.insert(articleExtractorBarButtonItem, at: 5)
+			// Insert before the action item when it is present; otherwise append.
+			if let items = toolbarItems, let actionIndex = items.firstIndex(where: { $0 === actionBarButtonItem }) {
+				toolbarItems?.insert(summarizeBarButtonItem, at: actionIndex)
+			} else {
+				toolbarItems?.append(summarizeBarButtonItem)
+			}
 		} else {
 			let flex = { UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil) }
 			toolbarItems = [
@@ -155,6 +178,8 @@ final class ArticleViewController: UIViewController {
 				nextUnreadBarButtonItem,
 				flex(),
 				articleExtractorBarButtonItem,
+				flex(),
+				summarizeBarButtonItem,
 				flex(),
 				actionBarButtonItem
 			]
@@ -174,12 +199,14 @@ final class ArticleViewController: UIViewController {
 		pageViewController.view.translatesAutoresizingMaskIntoConstraints = false
 		view.addSubview(pageViewController.view)
 		addChild(pageViewController!)
+		let pageTopConstraint = view.topAnchor.constraint(equalTo: pageViewController.view.topAnchor)
 		NSLayoutConstraint.activate([
 			view.leadingAnchor.constraint(equalTo: pageViewController.view.leadingAnchor),
 			view.trailingAnchor.constraint(equalTo: pageViewController.view.trailingAnchor),
-			view.topAnchor.constraint(equalTo: pageViewController.view.topAnchor),
+			pageTopConstraint,
 			view.bottomAnchor.constraint(equalTo: pageViewController.view.bottomAnchor)
 		])
+		pageTopLayoutConstraint = pageTopConstraint
 
 		let controller: WebViewController
 		if let state = restoreState {
@@ -255,6 +282,7 @@ final class ArticleViewController: UIViewController {
 
 	override func viewDidDisappear(_ animated: Bool) {
 		super.viewDidDisappear(animated)
+		cancelSummary()
 		restoreOriginalPopGestureRecognizerDelegate()
 	}
 
@@ -374,6 +402,68 @@ final class ArticleViewController: UIViewController {
 
 	@objc func toggleReaderView(_ sender: Any?) {
 		currentWebViewController?.toggleArticleExtractor()
+	}
+
+	// MARK: Summaries
+
+	@objc func summarizeArticle(_ sender: Any) {
+		guard let article else {
+			return
+		}
+		// One task per displayed article; the panel shows live state via the runner.
+		summaryRunner.onStateChange = { [weak self] displayState in
+			self?.handleSummaryStateChange(displayState)
+		}
+		summaryRunner.summarize(input: ArticleSummaryInput(article: article), settings: AppDefaults.shared.articleSummarySettings)
+	}
+
+	private func handleSummaryStateChange(_ displayState: ArticleSummaryDisplayState) {
+		switch displayState {
+		case .idle:
+			summaryPanelView?.removeFromSuperview()
+			summaryPanelView = nil
+		default:
+			let panel = ensureSummaryPanel()
+			panel.display(displayState)
+		}
+	}
+
+	private func ensureSummaryPanel() -> ArticleSummaryPanelView {
+		let panel: ArticleSummaryPanelView
+		if let summaryPanelView {
+			panel = summaryPanelView
+		} else {
+			panel = ArticleSummaryPanelView()
+			summaryPanelView = panel
+			panel.translatesAutoresizingMaskIntoConstraints = false
+			view.addSubview(panel)
+			let safeArea = view.safeAreaLayoutGuide
+			NSLayoutConstraint.activate([
+				panel.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
+				panel.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
+				panel.topAnchor.constraint(equalTo: safeArea.topAnchor)
+			])
+			// The panel takes space above the article instead of covering its text:
+			// the page view's top follows the panel's bottom while it is visible.
+			pageTopLayoutConstraint?.isActive = false
+			let pageTopBelowPanel = pageViewController.view.topAnchor.constraint(equalTo: panel.bottomAnchor)
+			pageTopBelowPanel.isActive = true
+			summaryPageTopConstraint = pageTopBelowPanel
+			panel.onDismiss = { [weak self] in
+				self?.cancelSummary()
+			}
+		}
+		return panel
+	}
+
+	private func cancelSummary() {
+		summaryRunner.onStateChange = nil
+		summaryRunner.cancel()
+		summaryPageTopConstraint?.isActive = false
+		summaryPageTopConstraint = nil
+		pageTopLayoutConstraint?.isActive = true
+		summaryPanelView?.removeFromSuperview()
+		summaryPanelView = nil
 	}
 
 	// MARK: Keyboard Shortcuts
