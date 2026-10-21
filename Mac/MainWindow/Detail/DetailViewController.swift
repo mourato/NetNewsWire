@@ -149,6 +149,10 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 		viewIfLoaded == nil ? nil : currentWebViewController.article
 	}
 
+	var canSummarizeArticle: Bool {
+		currentArticle != nil
+	}
+
 	@objc func summarizeArticle(_ sender: Any?) {
 		guard let article = currentArticle else {
 			return
@@ -228,7 +232,7 @@ extension DetailViewController: NSMenuItemValidation {
 
 	func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
 		if menuItem.action == #selector(summarizeArticle(_:)) {
-			return currentArticle != nil
+			return canSummarizeArticle
 		}
 		return true
 	}

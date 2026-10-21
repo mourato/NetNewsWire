@@ -273,6 +273,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 			return currentLink != nil
 		}
 
+		if item.action == #selector(summarizeArticle(_:)) {
+			return detailViewController?.canSummarizeArticle ?? false
+		}
+
 		if item.action == #selector(nextUnread(_:)) {
 			return canGoToNextUnread(wrappingToTop: true)
 		}
@@ -414,6 +418,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 	@objc func openInAppBrowser(_ sender: Any?) {
 		// There is no In-App Browser for mac - so we use safari
 		openArticleInBrowser(sender)
+	}
+
+	@IBAction func summarizeArticle(_ sender: Any?) {
+		detailViewController?.summarizeArticle(sender)
 	}
 
 	@IBAction func openInBrowserUsingOppositeOfSettings(_ sender: Any?) {
