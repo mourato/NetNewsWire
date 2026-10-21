@@ -244,11 +244,15 @@ import Secrets
 
 		let (data, urlResponse) = try await session.data(for: request)
 
-		guard (200...399).contains(urlResponse.forcedStatusCode) else {
+		let statusCode = urlResponse.forcedStatusCode
+		guard (200...399).contains(statusCode) else {
+			if statusCode == HTTPResponseCode.unauthorized || statusCode == HTTPResponseCode.forbidden {
+				throw WebserviceError.httpError(status: statusCode, responseBody: nil)
+			}
 			if let errorResponse = try? JSONDecoder().decode(MinifluxErrorResponse.self, from: data) {
 				throw MinifluxError.saveForLaterFailed(message: errorResponse.errorMessage)
 			}
-			throw WebserviceError.httpError(status: urlResponse.forcedStatusCode, responseBody: nil)
+			throw WebserviceError.httpError(status: statusCode, responseBody: nil)
 		}
 	}
 

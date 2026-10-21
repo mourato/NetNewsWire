@@ -150,6 +150,14 @@ import Secrets
 		XCTAssertTrue(unreadArticleIDs.contains("5001"))
 	}
 
+	func testUnauthorizedSaveSurfacesCredentialsErrorAndLeavesArticleUnread() async {
+		await assertSaveFailureSurfacesCredentialsError(statusCode: HTTPResponseCode.unauthorized)
+	}
+
+	func testForbiddenSaveSurfacesCredentialsErrorAndLeavesArticleUnread() async {
+		await assertSaveFailureSurfacesCredentialsError(statusCode: HTTPResponseCode.forbidden)
+	}
+
 	func testFailedSaveNeverMarksArticleRead() async {
 		let account = await makeMinifluxAccountWithUnreadArticle()
 		defer { TestAccountManager.shared.deleteAccount(account) }
@@ -172,6 +180,38 @@ import Secrets
 }
 
 private extension MinifluxSaveForLaterTests {
+
+	func assertSaveFailureSurfacesCredentialsError(statusCode: Int) async {
+		let account = await makeMinifluxAccountWithUnreadArticle()
+		defer { TestAccountManager.shared.deleteAccount(account) }
+		let body = Data(#"{"error_message":"credentials rejected"}"#.utf8)
+		TestingURLProtocol.setResponse(.init(statusCode: statusCode, data: body), forURLContaining: "/v1/entries/5001/save", httpMethod: HTTPMethod.post)
+
+		do {
+			try await account.saveArticlesForLater(articleIDs: ["5001"], markAsRead: true)
+			XCTFail("Expected the save to fail")
+		} catch let error as AccountError {
+			XCTAssertTrue(error.isCredentialsError)
+			XCTAssertEqual(error.errorDescription, "Your “\(account.nameForDisplay)” credentials are invalid or expired.")
+			XCTAssertEqual(error.recoverySuggestion, "Please update your credentials for this account, or ensure that your account with this service is still valid.")
+			guard case AccountError.wrappedError(let underlyingError, _, _, _) = error else {
+				XCTFail("Expected a wrapped credentials error, got \(error)")
+				return
+			}
+			guard case WebserviceError.httpError(let actualStatusCode, _) = underlyingError else {
+				XCTFail("Expected a wrapped HTTP error, got \(underlyingError)")
+				return
+			}
+			XCTAssertEqual(actualStatusCode, statusCode)
+		} catch MinifluxError.saveForLaterFailed(let message) {
+			XCTFail("Expected the credentials error, got saveForLaterFailed: \(message)")
+		} catch {
+			XCTFail("Unexpected error: \(error)")
+		}
+
+		let unreadArticleIDs = await account.fetchUnreadArticleIDsAsync()
+		XCTAssertTrue(unreadArticleIDs.contains("5001"))
+	}
 
 	func makeMinifluxAccountWithUnreadArticle() async -> Account {
 		await makeMinifluxAccount(unreadArticleIDs: ["5001"])
