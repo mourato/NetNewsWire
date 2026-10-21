@@ -90,7 +90,12 @@ class TimelineCustomizerCollectionViewController: UICollectionViewController {
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
 
 		if indexPath.section == 0 {
-			let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TimelineImageToggleCell.reuseIdentifier, for: indexPath) as! TimelineImageToggleCell
+			guard let cell = collectionView.dequeueReusableCell(
+				withReuseIdentifier: TimelineImageToggleCell.reuseIdentifier,
+				for: indexPath
+			) as? TimelineImageToggleCell else {
+				preconditionFailure("Timeline image toggle cell has an unexpected type.")
+			}
 			return cell
 		}
 
