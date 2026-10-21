@@ -29,6 +29,8 @@ enum MinifluxError: LocalizedError {
 	case serverVersionTooOld(foundVersion: String?)
 	case serverError(message: String)
 	case saveForLaterFailed(message: String)
+	case saveForLaterNoServer
+	case saveForLaterRequestFailed(error: Error)
 
 	var errorDescription: String? {
 		switch self {
@@ -44,6 +46,11 @@ enum MinifluxError: LocalizedError {
 		case .saveForLaterFailed(let message):
 			let localizedText = NSLocalizedString("The article couldn’t be saved for later. The Miniflux server reported: %@", comment: "Save for Later failed — server error message")
 			return NSString.localizedStringWithFormat(localizedText as NSString, message) as String
+		case .saveForLaterNoServer:
+			return NSLocalizedString("The article couldn’t be saved for later because this account has no Miniflux server address. Re-enter the account’s credentials, or remove the account and add it again.", comment: "Save for Later failed — the account has no server address")
+		case .saveForLaterRequestFailed(let error):
+			let localizedText = NSLocalizedString("The article couldn’t be saved for later. %@", comment: "Save for Later failed — underlying error description")
+			return NSString.localizedStringWithFormat(localizedText as NSString, error.localizedDescription) as String
 		}
 	}
 }

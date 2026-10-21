@@ -500,11 +500,15 @@ import Secrets
 		true
 	}
 
-	/// Article IDs are Miniflux entry IDs. Validates every ID before sending anything,
-	/// so a bad ID can’t be reported as a successful save.
+	/// Article IDs are Miniflux entry IDs. Validates the server address and every ID before
+	/// sending anything, so a bad ID can’t be reported as a successful save. Errors describe
+	/// the save, not a sync; only credentials errors keep the account wrapper.
 	func saveArticlesForLater(articleIDs: Set<String>) async throws {
 		guard let account else {
 			throw AccountError.invalidParameter
+		}
+		guard accountSettings?.endpointURL != nil else {
+			throw MinifluxError.saveForLaterNoServer
 		}
 		var entryIDs = [Int64]()
 		for articleID in articleIDs {
@@ -522,7 +526,11 @@ import Secrets
 			// Already carries the server’s message; wrapping would present it as a sync error.
 			throw error
 		} catch {
-			throw AccountError.wrapped(error, account)
+			let accountError = AccountError.wrapped(error, account)
+			if accountError.isCredentialsError {
+				throw accountError
+			}
+			throw MinifluxError.saveForLaterRequestFailed(error: error)
 		}
 	}
 
