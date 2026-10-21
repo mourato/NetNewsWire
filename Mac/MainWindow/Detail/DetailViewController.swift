@@ -79,7 +79,6 @@ final class DetailViewController: NSViewController, WKUIDelegate {
 	private var summaryPanelController: ArticleSummaryPanelViewController?
 	private var summaryArticleIdentity: ArticleIdentity?
 	private let summaryRunner = ArticleSummaryRunner()
-	private var summaryArticleID: String?
 	private static let summaryPanelHeight: CGFloat = 150
 
 	convenience init() {
