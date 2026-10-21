@@ -566,6 +566,10 @@ extension MainTimelineViewController: UICollectionViewDelegate {
 			}
 			menuElements.append(UIMenu(title: "", options: .displayInline, children: markActions))
 
+			if let action = self.saveForLaterAction(article) {
+				menuElements.append(UIMenu(title: "", options: .displayInline, children: [action]))
+			}
+
 			var secondaryActions = [UIAction]()
 			if let action = self.discloseFeedAction(article) {
 				secondaryActions.append(action)
@@ -1222,6 +1226,17 @@ extension MainTimelineViewController {
 		}
 
 		return action
+	}
+
+	func saveForLaterAction(_ article: Article) -> UIAction? {
+		guard [article].canSaveForLater() else {
+			return nil
+		}
+
+		let title = NSLocalizedString("Save for Later", comment: "Command")
+		return UIAction(title: title, image: Assets.Images.saveForLater) { [weak self] _ in
+			self?.coordinator?.saveForLater([article])
+		}
 	}
 
 	func markAboveAsRead(_ article: Article) {

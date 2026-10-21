@@ -54,7 +54,9 @@ final class SettingsViewController: UITableViewController {
 		case theme = 0
 		case openLinksInNetNewsWire = 1
 		case enableJavaScript = 2
-		case enableFullScreenArticles = 3
+		case markArticlesReadWhenSavedForLater = 3
+		// Keep last: the row count drops it on iPad.
+		case enableFullScreenArticles = 4
 	}
 
 	private enum HelpRow: Int {
@@ -77,6 +79,7 @@ final class SettingsViewController: UITableViewController {
 	@IBOutlet var unreadCountDisplayCell: UITableViewCell?
 	@IBOutlet var openLinksInNetNewsWire: UISwitch!
 	@IBOutlet var enableJavaScriptSwitch: UISwitch!
+	@IBOutlet var markArticlesReadWhenSavedForLaterSwitch: UISwitch!
 
 	var scrollToArticlesSection = false
 	weak var presentingParentController: UIViewController?
@@ -149,6 +152,7 @@ final class SettingsViewController: UITableViewController {
 		}
 
 		openLinksInNetNewsWire.isOn = !AppDefaults.shared.useSystemBrowser
+		markArticlesReadWhenSavedForLaterSwitch.isOn = AppDefaults.shared.markArticlesReadWhenSavedForLater
 
 		let buildLabel = NonIntrinsicLabel(frame: CGRect(x: 32.0, y: 0.0, width: 0.0, height: 0.0))
 		buildLabel.font = UIFont.systemFont(ofSize: 11.0)
@@ -413,6 +417,10 @@ final class SettingsViewController: UITableViewController {
 	@IBAction func switchJavaScriptPreference(_ sender: Any) {
 		AppDefaults.shared.isArticleContentJavascriptEnabled = enableJavaScriptSwitch.isOn
  	}
+
+	@IBAction func switchMarkArticlesReadWhenSavedForLater(_ sender: Any) {
+		AppDefaults.shared.markArticlesReadWhenSavedForLater = markArticlesReadWhenSavedForLaterSwitch.isOn
+	}
 
 	// MARK: - Notifications
 

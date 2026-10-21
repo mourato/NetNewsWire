@@ -1097,6 +1097,9 @@
     "Running" : {
       "comment" : "Running"
     },
+    "Save for Later" : {
+      "comment" : "Command"
+    },
     "Scan completed." : {
       "comment" : "Scan status text when completed"
     },

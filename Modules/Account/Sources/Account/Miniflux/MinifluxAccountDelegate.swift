@@ -496,6 +496,24 @@ import Secrets
 		}
 	}
 
+	var supportsSaveForLater: Bool {
+		true
+	}
+
+	/// Article IDs are Miniflux entry IDs.
+	func saveArticlesForLater(articleIDs: Set<String>) async throws {
+		guard let account else {
+			return
+		}
+		do {
+			for entryID in articleIDs.compactMap({ Int64($0) }) {
+				try await caller.saveEntry(entryID: entryID)
+			}
+		} catch {
+			throw AccountError.wrapped(error, account)
+		}
+	}
+
 	func accountDidInitialize() {
 		guard let account else {
 			return

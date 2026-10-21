@@ -289,6 +289,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 			return validateToggleStarred(item)
 		}
 
+		if item.action == #selector(saveForLater(_:)) {
+			return currentTimelineViewController?.canSaveSelectedArticlesForLater() ?? false
+		}
+
 		if item.action == #selector(markAboveArticlesAsRead(_:)) {
 			return canMarkAboveArticlesAsRead()
 		}
@@ -463,6 +467,10 @@ final class MainWindowController: NSWindowController, NSUserInterfaceValidations
 
 	@IBAction func toggleStarred(_ sender: Any?) {
 		currentTimelineViewController?.toggleStarredStatusForSelectedArticles()
+	}
+
+	@IBAction func saveForLater(_ sender: Any?) {
+		currentTimelineViewController?.saveSelectedArticlesForLater()
 	}
 
 	@IBAction func toggleArticleExtractor(_ sender: Any?) {
@@ -869,6 +877,7 @@ extension NSToolbarItem.Identifier {
 	static let nextUnread = NSToolbarItem.Identifier("nextUnread")
 	static let markRead = NSToolbarItem.Identifier("markRead")
 	static let markStar = NSToolbarItem.Identifier("markStar")
+	static let saveForLater = NSToolbarItem.Identifier("saveForLater")
 	static let readerView = NSToolbarItem.Identifier("readerView")
 	static let openInBrowser = NSToolbarItem.Identifier("openInBrowser")
 	static let share = NSToolbarItem.Identifier("share")
@@ -926,6 +935,10 @@ extension MainWindowController: NSToolbarDelegate {
 		case .markStar:
 			let title = NSLocalizedString("Star", comment: "Star")
 			return buildToolbarButton(.markStar, title, Assets.Images.starOpen, "toggleStarred:")
+
+		case .saveForLater:
+			let title = NSLocalizedString("Save for Later", comment: "Command")
+			return buildToolbarButton(.saveForLater, title, Assets.Images.saveForLater, "saveForLater:")
 
 		case .nextUnread:
 			let title = NSLocalizedString("Next Unread", comment: "Next Unread")
@@ -992,6 +1005,7 @@ extension MainWindowController: NSToolbarDelegate {
 			.nextUnread,
 			.markRead,
 			.markStar,
+			.saveForLater,
 			.readerView,
 			.openInBrowser,
 			.share,

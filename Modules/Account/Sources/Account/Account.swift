@@ -629,6 +629,18 @@ public enum FetchType {
 		try await delegate.markArticles(articleIDs: articleIDs, statusKey: statusKey, flag: flag)
 	}
 
+	public var supportsSaveForLater: Bool {
+		delegate.supportsSaveForLater
+	}
+
+	/// Marks the articles read only after the save succeeds, and only when `markAsRead` is true.
+	public func saveArticlesForLater(articleIDs: Set<String>, markAsRead: Bool) async throws {
+		try await delegate.saveArticlesForLater(articleIDs: articleIDs)
+		if markAsRead {
+			try await markArticles(articleIDs: articleIDs, statusKey: .read, flag: true)
+		}
+	}
+
 	func existingContainer(withExternalID externalID: String) -> Container? {
 		guard self.externalID != externalID else {
 			return self

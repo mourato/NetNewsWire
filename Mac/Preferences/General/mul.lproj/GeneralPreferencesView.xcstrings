@@ -367,6 +367,30 @@
         }
       }
     },
+    "sfL-cC-mRc.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Mark articles as read\"; ObjectID = \"sfL-cC-mRc\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mark articles as read"
+          }
+        }
+      }
+    },
+    "sfL-lC-lTc.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Save for Later:\"; ObjectID = \"sfL-lC-lTc\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save for Later:"
+          }
+        }
+      }
+    },
     "SkZ-tE-blK.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"Open feeds in default news reader\"; ObjectID = \"SkZ-tE-blK\";",
       "extractionState" : "extracted_with_value",

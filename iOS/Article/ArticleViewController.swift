@@ -52,6 +52,13 @@ final class ArticleViewController: UIViewController {
 		return button
 	}()
 
+	private lazy var saveForLaterBarButtonItem: UIBarButtonItem = {
+		let item = UIBarButtonItem(image: Assets.Images.saveForLater, style: .plain, target: self, action: #selector(saveForLater(_:)))
+		item.title = NSLocalizedString("Save for Later", comment: "Command")
+		item.accLabelText = item.title
+		return item
+	}()
+
 	weak var coordinator: SceneCoordinator!
 
 	private let poppableDelegate = PoppableGestureRecognizerDelegate()
@@ -158,6 +165,9 @@ final class ArticleViewController: UIViewController {
 				flex(),
 				actionBarButtonItem
 			]
+		}
+		if let starIndex = toolbarItems?.firstIndex(of: starBarButtonItem) {
+			toolbarItems?.insert(saveForLaterBarButtonItem, at: starIndex + 1)
 		}
 
 		pageViewController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: [:])
@@ -272,9 +282,12 @@ final class ArticleViewController: UIViewController {
 			nextArticleBarButtonItem.isEnabled = false
 			readBarButtonItem.isEnabled = false
 			starBarButtonItem.isEnabled = false
+			saveForLaterBarButtonItem.isHidden = true
 			actionBarButtonItem.isEnabled = false
 			return
 		}
+
+		saveForLaterBarButtonItem.isHidden = ![article].canSaveForLater()
 
 		nextUnreadBarButtonItem.isEnabled = coordinator.isNextUnreadAvailable
 		prevArticleBarButtonItem.isEnabled = coordinator.isPrevArticleAvailable
@@ -366,6 +379,10 @@ final class ArticleViewController: UIViewController {
 
 	@IBAction func toggleStar(_ sender: Any) {
 		coordinator.toggleStarredForCurrentArticle()
+	}
+
+	@objc func saveForLater(_ sender: Any) {
+		coordinator.saveCurrentArticleForLater()
 	}
 
 	@IBAction func showActivityDialog(_ sender: Any) {

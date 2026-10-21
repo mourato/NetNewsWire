@@ -383,6 +383,39 @@
                                             </constraints>
                                         </tableViewCellContentView>
                                     </tableViewCell>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="sfL-Cl-mRd" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
+                                        <rect key="frame" x="20" y="1004" width="374" height="51.5"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="sfL-Cl-mRd" id="sfL-Cv-mRd">
+                                            <rect key="frame" x="0.0" y="0.0" width="374" height="51.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" horizontalCompressionResistancePriority="749" text="Mark as Read on Save for Later" textAlignment="natural" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontForContentSizeCategory="YES" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sfL-Lb-mRd">
+                                                    <rect key="frame" x="20" y="15" width="250" height="21.5"/>
+                                                    <fontDescription key="fontDescription" style="UICTFontTextStyleBody"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="sfL-Sw-mRd">
+                                                    <rect key="frame" x="293" y="12" width="63" height="28"/>
+                                                    <color key="onTintColor" name="primaryAccentColor"/>
+                                                    <connections>
+                                                        <action selector="switchMarkArticlesReadWhenSavedForLater:" destination="a0p-rk-skQ" eventType="valueChanged" id="sfL-Ac-mRd"/>
+                                                    </connections>
+                                                </switch>
+                                            </subviews>
+                                            <constraints>
+                                                <constraint firstItem="sfL-Lb-mRd" firstAttribute="top" secondItem="sfL-Cv-mRd" secondAttribute="topMargin" id="sfL-K1-mRd"/>
+                                                <constraint firstItem="sfL-Sw-mRd" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="sfL-Lb-mRd" secondAttribute="trailing" constant="8" id="sfL-K2-mRd"/>
+                                                <constraint firstAttribute="bottom" relation="greaterThanOrEqual" secondItem="sfL-Sw-mRd" secondAttribute="bottom" constant="6" id="sfL-K3-mRd"/>
+                                                <constraint firstItem="sfL-Sw-mRd" firstAttribute="centerY" secondItem="sfL-Cv-mRd" secondAttribute="centerY" id="sfL-K4-mRd"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="sfL-Lb-mRd" secondAttribute="bottom" id="sfL-K5-mRd"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="sfL-Sw-mRd" secondAttribute="trailing" id="sfL-K6-mRd"/>
+                                                <constraint firstItem="sfL-Sw-mRd" firstAttribute="top" relation="greaterThanOrEqual" secondItem="sfL-Cv-mRd" secondAttribute="top" constant="6" id="sfL-K7-mRd"/>
+                                                <constraint firstItem="sfL-Lb-mRd" firstAttribute="leading" secondItem="sfL-Cv-mRd" secondAttribute="leadingMargin" id="sfL-K8-mRd"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                    </tableViewCell>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="none" indentationWidth="10" id="WR6-xo-ty2" customClass="VibrantTableViewCell" customModule="NetNewsWire" customModuleProvider="target">
                                         <rect key="frame" x="20" y="1004" width="374" height="92"/>
                                         <autoresizingMask key="autoresizingMask"/>
@@ -673,6 +706,7 @@
                         <outlet property="confirmMarkAllAsReadSwitch" destination="UOo-9z-IuL" id="yLZ-Kf-wDt"/>
                         <outlet property="enableJavaScriptSwitch" destination="Djo-HE-LWS" id="muL-I5-eDE"/>
                         <outlet property="groupByFeedSwitch" destination="JNi-Wz-RbU" id="TwH-Kd-o6N"/>
+                        <outlet property="markArticlesReadWhenSavedForLaterSwitch" destination="sfL-Sw-mRd" id="sfL-Ot-mRd"/>
                         <outlet property="openLinksInNetNewsWire" destination="dhR-L2-PX3" id="z1b-pX-bwG"/>
                         <outlet property="refreshClearsReadArticlesSwitch" destination="duV-CN-JmH" id="xTd-jF-Ei1"/>
                         <outlet property="showFullscreenArticlesSwitch" destination="2Md-2E-7Z4" id="lEN-VP-wEO"/>

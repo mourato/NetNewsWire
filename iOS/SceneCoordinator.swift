@@ -1492,6 +1492,24 @@ struct SidebarItemNode: Hashable, Sendable {
 		markArticlesWithUndo([article], statusKey: .starred, flag: !article.status.starred)
 	}
 
+	func saveCurrentArticleForLater() {
+		if let article = currentArticle {
+			saveForLater([article])
+		}
+	}
+
+	/// The article toolbar and the timeline context menu both save through here.
+	func saveForLater(_ articles: [Article]) {
+		let presentError = ErrorHandler.present(rootSplitViewController)
+		Task { @MainActor in
+			do {
+				try await saveArticlesForLater(articles)
+			} catch {
+				presentError(error)
+			}
+		}
+	}
+
 	func timelineFeedIsEqualTo(_ feed: Feed) -> Bool {
 		guard let timelineFeed = timelineFeed as? Feed else {
 			return false

@@ -234,6 +234,12 @@ import Secrets
 		}
 	}
 
+	/// Sends the entry to the third-party integrations (such as a read-it-later service)
+	/// configured on the server. Unlike the bookmark toggle, this doesn’t change starred state.
+	func saveEntry(entryID: Int64) async throws {
+		try await session.send(request: makeRequest(path: "entries/\(entryID)/save"), method: HTTPMethod.post)
+	}
+
 	/// Synchronous — Miniflux’s OPML import doesn’t require polling for completion.
 	func importOPML(opmlData: Data) async throws {
 		var request = try makeRequest(path: "import")
