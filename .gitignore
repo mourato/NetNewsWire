@@ -100,4 +100,5 @@ fastlane/test_output
 # swift-project-setup build artifacts
 .xcode-build/
 dist/
+.worktrees/
 
